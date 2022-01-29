@@ -1,3 +1,6 @@
+#include "cairo.h"
+#include "swaylock.h"
+
 char *digits[] = {
     "0", "1", "2", "3",
     "4", "5", "6", "7",
@@ -18,14 +21,15 @@ const int rows = sizeof(digits) / sizeof(digits[0]) / cols ;
  * dimensions of the stroke centres is less than the size of the
  * drawn area
  */
-int pinpad_width =  (2 +
-		     cols * (2 * button_radius) +
-		     (cols - 1) * padding_x);
+const int pinpad_width =  (2 +
+			   cols * (2 * button_radius) +
+			   (cols - 1) * padding_x);
 
-int pinpad_height =  (2 +
-		      rows * (2 * button_radius) +
-		      (rows - 1) * padding_y);
+const int pinpad_height =  (2 +
+			    rows * (2 * button_radius) +
+			    (rows - 1) * padding_y);
 
+#define M_PI 3.14159265358979323846
 
 /* button 0 centre is at offset (button_radius)
  *              right edge at 2* (button_radius)

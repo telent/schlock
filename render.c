@@ -5,11 +5,6 @@
 #include "background-image.h"
 #include "swaylock.h"
 
-#define M_PI 3.14159265358979323846
-const float TYPE_INDICATOR_RANGE = M_PI / 3.0f;
-const float TYPE_INDICATOR_BORDER_THICKNESS = M_PI / 128.0f;
-
-#include "pinentry.c"
 
 void render_frame_background(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;

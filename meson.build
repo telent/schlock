@@ -129,6 +129,7 @@ sources = [
 	'loop.c',
 	'main.c',
 	'password.c',
+	'pinentry.c',
 	'pool-buffer.c',
 	'render.c',
 	'seat.c',
