@@ -124,6 +124,9 @@ struct swaylock_image {
 extern const int pinpad_width, pinpad_height;
 
 void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface);
+void action_for_xy(int x, int y);
+
+void enter_pin_digit(char * digit);
 
 void swaylock_handle_key(struct swaylock_state *state,
 		xkb_keysym_t keysym, uint32_t codepoint);

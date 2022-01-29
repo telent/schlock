@@ -8,6 +8,10 @@ char *digits[] = {
     "C", "D", "E", "F"
 };
 
+char * backspace = "⌫";
+
+char entered_pin[24] = { '\0' };
+
 /* these numbers are unscaled, multiply by surface->scale for px */
 
 const int button_radius = 34;
@@ -15,7 +19,8 @@ const int cols = 4;
 const int thickness = 4;
 const int padding_x = 45;
 const int padding_y = 45;
-const int rows = sizeof(digits) / sizeof(digits[0]) / cols ;
+const int num_digits = sizeof(digits) / sizeof(digits[0]);
+const int rows = 1 + (num_digits / cols) ;
 
 /* the '+ 2' here is because we draw with a 2 pixel pen, so the
  * dimensions of the stroke centres is less than the size of the
@@ -49,6 +54,24 @@ static int y_for_row(int row)
     return 1 + button_radius + row * (2 * button_radius + padding_y);
 }
 
+void render_centered_text(cairo_t *cairo, int cx, int cy, char *text)
+{
+    cairo_text_extents_t extents;
+    cairo_font_extents_t fe;
+    double text_x, text_y;
+    cairo_text_extents(cairo, text, &extents);
+    cairo_font_extents(cairo, &fe);
+    text_x = cx -
+	(extents.width / 2 + extents.x_bearing);
+    text_y = cy +
+	(fe.height / 2 - fe.descent);
+
+    cairo_move_to(cairo, text_x, text_y);
+    cairo_show_text(cairo, text);
+
+    cairo_stroke(cairo);
+}
+
 void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 {
     int sc = surface->scale;
@@ -72,54 +95,85 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 			   CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cairo, sc * button_radius * 1.2f);
 
-    for(int c = 0; c < cols; c ++) {
-	for(int r = 0; r < rows; r ++) {
-	    cairo_set_source_u32(cairo, 0x2020ff60);
-	    cairo_set_line_width(cairo, 3.0 * surface->scale);
+    for(int i = 0; i < num_digits; i ++) {
+	int r = i / cols;
+	int c = i % cols;
 
-	    int x = x_for_col(c) * surface->scale;
-	    int y = y_for_row(r) * surface->scale;
+	cairo_set_source_u32(cairo, 0x2020ff60);
+	cairo_set_line_width(cairo, 3.0 * surface->scale);
 
-	    cairo_arc(cairo, x, y,
-		      sc * button_radius, 0, 2 * M_PI);
-	    cairo_stroke(cairo);
+	int x = x_for_col(c) * surface->scale;
+	int y = y_for_row(r) * surface->scale;
 
-	    cairo_set_line_width(cairo, 3.0 * surface->scale);
-	    cairo_arc(cairo, x,y,
-		      sc * (button_radius - thickness), 0, 2 * M_PI);
-	    cairo_stroke(cairo);
+	cairo_arc(cairo, x, y,
+		  sc * button_radius, 0, 2 * M_PI);
+	cairo_stroke(cairo);
 
-	    char *text = digits[c + cols * r];
+	cairo_set_line_width(cairo, 3.0 * surface->scale);
+	cairo_arc(cairo, x,y,
+		  sc * (button_radius - thickness), 0, 2 * M_PI);
+	cairo_stroke(cairo);
 
-	    cairo_text_extents_t extents;
-	    cairo_font_extents_t fe;
-	    double text_x, text_y;
-	    cairo_text_extents(cairo, text, &extents);
-	    cairo_font_extents(cairo, &fe);
-	    text_x = x -
-		(extents.width / 2 + extents.x_bearing);
-	    text_y = y +
-		(fe.height / 2 - fe.descent);
+	char *text = digits[c + cols * r];
+	cairo_set_source_u32(cairo, 0x000077);
+	render_centered_text(cairo, x + 2, y + 2, text);
+	render_centered_text(cairo, x - 1, y - 1, text);
 
-	    cairo_set_source_u32(cairo, 0x000077);
-	    cairo_move_to(cairo, text_x + 2, text_y + 2);
-	    cairo_show_text(cairo, text);
-	    cairo_move_to(cairo, text_x - 1, text_y - 1);
-	    cairo_show_text(cairo, text);
+	cairo_set_source_u32(cairo, 0xddddffdd);
+	render_centered_text(cairo, x, y, text);
+    }
+    cairo_set_source_u32(cairo, 0xc02020ff);
+    render_centered_text(cairo,
+			 x_for_col(3) * surface->scale,
+			 y_for_row(4) * surface->scale,
+			 backspace);
+}
 
-	    cairo_set_source_u32(cairo, 0xddddffdd);
-	    cairo_move_to(cairo, text_x, text_y);
-	    cairo_show_text(cairo, text);
+static int button_for_xy(int x, int y)
+{
 
-	    cairo_stroke(cairo);
+    float colf = 1.0 * (x - button_radius) /
+	(button_radius * 2 + padding_x);
+    int col = (int) (floor(colf + 0.5));
+    if(fabs(colf - col) > 0.3)
+	return -1;
 
-	}
+    float rowf  = 1.0 * (y - button_radius) /
+	(button_radius * 2 + padding_y);
+    int row = (int) (floor(rowf + 0.5));
+    if(fabs(rowf - row) > 0.3)
+	return -1;
+
+    return col + row * cols;
+}
+
+void delete_digit()
+{
+    int offset = strlen(entered_pin);
+    if(offset > 0)
+	entered_pin[offset - 1] = '\0';
+
+    fprintf(stderr, "typed: \"%s\"\n", entered_pin);
+}
+
+void enter_pin_digit(char * digit)
+{
+    int offset = strlen(entered_pin);
+    if(offset + strlen(digit) < sizeof entered_pin) {
+	strcat(entered_pin, digit);
+	fprintf(stderr, "typed: \"%s\"\n", entered_pin);
+    } else {
+	fprintf(stderr, "string reached max length\n");
     }
 }
-#if 0
 
-static char button_for_xy(int x, int y)
+
+void action_for_xy(int x, int y)
 {
-    return '\0';
+    int b = button_for_xy(x,y);
+    if((b >= 0) && (b < num_digits))
+	enter_pin_digit(digits[b]);
+    else if(b == 19)
+	delete_digit();
+
 }
-#endif

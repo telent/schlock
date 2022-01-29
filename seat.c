@@ -157,11 +157,9 @@ static void wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
 	dragging = true;
     } else {
 	dragging = false;
-	fprintf(stderr, "pointer button release at %d %d\n",
-		wl_fixed_to_int(last_pointer_x),
-		wl_fixed_to_int(last_pointer_y));
+	action_for_xy(wl_fixed_to_int(last_pointer_x),
+		      wl_fixed_to_int(last_pointer_y));
     }
-
 }
 
 static void wl_pointer_axis(void *data, struct wl_pointer *wl_pointer,
