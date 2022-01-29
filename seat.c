@@ -128,7 +128,7 @@ static const struct wl_keyboard_listener keyboard_listener = {
 static void wl_pointer_enter(void *data, struct wl_pointer *wl_pointer,
 		uint32_t serial, struct wl_surface *surface,
 		wl_fixed_t surface_x, wl_fixed_t surface_y) {
-	wl_pointer_set_cursor(wl_pointer, serial, NULL, 0, 0);
+    // wl_pointer_set_cursor(wl_pointer, serial, NULL, 0, 0);
 }
 
 static void wl_pointer_leave(void *data, struct wl_pointer *wl_pointer,
@@ -136,14 +136,32 @@ static void wl_pointer_leave(void *data, struct wl_pointer *wl_pointer,
 	// Who cares
 }
 
+static bool dragging = false;
+static wl_fixed_t last_pointer_x, last_pointer_y;
+
 static void wl_pointer_motion(void *data, struct wl_pointer *wl_pointer,
 		uint32_t time, wl_fixed_t surface_x, wl_fixed_t surface_y) {
-	// Who cares
+    last_pointer_x = surface_x;
+    last_pointer_y = surface_y;
+    if(dragging) {
+	fprintf(stderr, "drag %d %d\n",
+		wl_fixed_to_int(surface_x),
+		wl_fixed_to_int(surface_y));
+    }
 }
+
 
 static void wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
 		uint32_t serial, uint32_t time, uint32_t button, uint32_t state) {
-	// Who cares
+    if(state != 0) {
+	dragging = true;
+    } else {
+	dragging = false;
+	fprintf(stderr, "pointer button release at %d %d\n",
+		wl_fixed_to_int(last_pointer_x),
+		wl_fixed_to_int(last_pointer_y));
+    }
+
 }
 
 static void wl_pointer_axis(void *data, struct wl_pointer *wl_pointer,
