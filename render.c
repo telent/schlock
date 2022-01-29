@@ -9,28 +9,6 @@
 const float TYPE_INDICATOR_RANGE = M_PI / 3.0f;
 const float TYPE_INDICATOR_BORDER_THICKNESS = M_PI / 128.0f;
 
-static void set_color_for_state(cairo_t *cairo, struct swaylock_state *state,
-		struct swaylock_colorset *colorset) {
-	if (state->auth_state == AUTH_STATE_VALIDATING) {
-		cairo_set_source_u32(cairo, colorset->verifying);
-	} else if (state->auth_state == AUTH_STATE_INVALID) {
-		cairo_set_source_u32(cairo, colorset->wrong);
-	} else if (state->auth_state == AUTH_STATE_CLEAR) {
-		cairo_set_source_u32(cairo, colorset->cleared);
-	} else {
-		if (state->xkb.caps_lock && state->args.show_caps_lock_indicator) {
-			cairo_set_source_u32(cairo, colorset->caps_lock);
-		} else if (state->xkb.caps_lock && !state->args.show_caps_lock_indicator &&
-				state->args.show_caps_lock_text) {
-			uint32_t inputtextcolor = state->args.colors.text.input;
-			state->args.colors.text.input = state->args.colors.text.caps_lock;
-			cairo_set_source_u32(cairo, colorset->input);
-			state->args.colors.text.input = inputtextcolor;
-		} else {
-			cairo_set_source_u32(cairo, colorset->input);
-		}
-	}
-}
 
 void render_frame_background(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
@@ -68,37 +46,41 @@ void render_frame_background(struct swaylock_surface *surface) {
 	wl_surface_commit(surface->surface);
 }
 
+char *digits[] = {
+    "0", "1", "2", "3",
+    "4", "5", "6", "7",
+    "8", "9", "A", "B",
+    "C", "D", "E", "F"
+};
+
 void render_frame(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 
-	int arc_radius = state->args.radius * surface->scale;
-	int arc_thickness = state->args.thickness * surface->scale;
-	int buffer_diameter = (arc_radius + arc_thickness) * 2;
+	int button_rows = 4;
+	int button_cols = 4;
+
+	int arc_radius = 30 * surface->scale;
+	int arc_thickness = 4 * surface->scale;
+	int padding = 25 * surface->scale;
 
 	int buffer_width = surface->indicator_width;
 	int buffer_height = surface->indicator_height;
-	int new_width = buffer_diameter;
-	int new_height = buffer_diameter;
+
+	int new_width = (arc_radius + arc_thickness + padding) * 2 * button_cols;
+	int new_height = (arc_radius + arc_thickness + padding) * 2 * button_rows;
+
+	int first_x = (arc_radius + arc_thickness) + padding;
+	int first_y = (arc_radius + arc_thickness) + padding;
 
 	int subsurf_xpos;
 	int subsurf_ypos;
 
-	// Center the indicator unless overridden by the user
-	if (state->args.override_indicator_x_position) {
-		subsurf_xpos = state->args.indicator_x_position -
-			buffer_width / (2 * surface->scale) + 2 / surface->scale;
-	} else {
-		subsurf_xpos = surface->width / 2 -
-			buffer_width / (2 * surface->scale) + 2 / surface->scale;
-	}
+	// centre on the display
+	subsurf_xpos = (surface->width - new_width) / 2;
+	subsurf_ypos = (surface->height - new_height) / 2;
 
-	if (state->args.override_indicator_y_position) {
-		subsurf_ypos = state->args.indicator_y_position -
-			(state->args.radius + state->args.thickness);
-	} else {
-		subsurf_ypos = surface->height / 2 -
-			(state->args.radius + state->args.thickness);
-	}
+	fprintf(stderr, "offset %d %d\n", subsurf_xpos, subsurf_xpos);
+
 
 	wl_subsurface_set_position(surface->subsurface, subsurf_xpos, subsurf_ypos);
 
@@ -129,9 +111,57 @@ void render_frame(struct swaylock_surface *surface) {
 	cairo_paint(cairo);
 	cairo_restore(cairo);
 
-	float type_indicator_border_thickness =
-		TYPE_INDICATOR_BORDER_THICKNESS * surface->scale;
+	cairo_select_font_face(cairo, state->args.font,
+			       CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
+	cairo_set_font_size(cairo, arc_radius * 1.2f);
 
+	for(int c = 0; c < button_cols; c ++) {
+	    for(int r = 0; r < button_rows; r ++) {
+		cairo_set_source_u32(cairo, 0x2020ff60);
+		cairo_set_line_width(cairo, 3.0 * surface->scale);
+
+		int x = first_x +
+		    c * ((arc_radius + arc_thickness + padding) * 2);
+		int y = first_y +
+		    r * ((arc_radius + arc_thickness + padding) * 2);
+		cairo_arc(cairo, x, y,
+			  arc_radius - arc_thickness / 3, 0, 2 * M_PI);
+		cairo_stroke(cairo);
+
+		cairo_set_line_width(cairo, 3.0 * surface->scale);
+		cairo_arc(cairo, x,y,
+			  arc_radius + arc_thickness / 2, 0, 2 * M_PI);
+		cairo_stroke(cairo);
+
+		char *text = digits[c + button_cols * r];
+
+		cairo_text_extents_t extents;
+		cairo_font_extents_t fe;
+		double text_x, text_y;
+		cairo_text_extents(cairo, text, &extents);
+		cairo_font_extents(cairo, &fe);
+		text_x = x -
+		    (extents.width / 2 + extents.x_bearing);
+		text_y = y +
+		    (fe.height / 2 - fe.descent);
+
+		cairo_set_source_u32(cairo, 0x000077);
+		cairo_move_to(cairo, text_x + 2, text_y + 2);
+		cairo_show_text(cairo, text);
+		cairo_move_to(cairo, text_x - 1, text_y - 1);
+		cairo_show_text(cairo, text);
+
+		cairo_set_source_u32(cairo, 0xddddffdd);
+		cairo_move_to(cairo, text_x, text_y);
+		cairo_show_text(cairo, text);
+
+		cairo_stroke(cairo);
+		// cairo_close_path(cairo);
+		// cairo_new_sub_path(cairo);
+	    }
+	}
+
+#if 0
 	if (state->args.show_indicator && (state->auth_state != AUTH_STATE_IDLE ||
 			state->args.indicator_idle_visible)) {
 		// Fill inner circle
@@ -142,89 +172,11 @@ void render_frame(struct swaylock_surface *surface) {
 		cairo_fill_preserve(cairo);
 		cairo_stroke(cairo);
 
-		// Draw ring
-		cairo_set_line_width(cairo, arc_thickness);
-		cairo_arc(cairo, buffer_width / 2, buffer_diameter / 2, arc_radius,
-				0, 2 * M_PI);
-		set_color_for_state(cairo, state, &state->args.colors.ring);
 		cairo_stroke(cairo);
 
-		// Draw a message
-		char *text = NULL;
-		const char *layout_text = NULL;
-		char attempts[4]; // like i3lock: count no more than 999
-		set_color_for_state(cairo, state, &state->args.colors.text);
-		cairo_select_font_face(cairo, state->args.font,
-				CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
-		if (state->args.font_size > 0) {
-			cairo_set_font_size(cairo, state->args.font_size);
-		} else {
-			cairo_set_font_size(cairo, arc_radius / 3.0f);
-		}
-		switch (state->auth_state) {
-		case AUTH_STATE_VALIDATING:
-			text = "verifying";
-			break;
-		case AUTH_STATE_INVALID:
-			text = "wrong";
-			break;
-		case AUTH_STATE_CLEAR:
-			text = "cleared";
-			break;
-		case AUTH_STATE_INPUT:
-		case AUTH_STATE_INPUT_NOP:
-		case AUTH_STATE_BACKSPACE:
-			// Caps Lock has higher priority
-			if (state->xkb.caps_lock && state->args.show_caps_lock_text) {
-				text = "Caps Lock";
-			} else if (state->args.show_failed_attempts &&
-					state->failed_attempts > 0) {
-				if (state->failed_attempts > 999) {
-					text = "999+";
-				} else {
-					snprintf(attempts, sizeof(attempts), "%d", state->failed_attempts);
-					text = attempts;
-				}
-			}
 
-			xkb_layout_index_t num_layout = xkb_keymap_num_layouts(state->xkb.keymap);
-			if (!state->args.hide_keyboard_layout &&
-					(state->args.show_keyboard_layout || num_layout > 1)) {
-				xkb_layout_index_t curr_layout = 0;
-
-				// advance to the first active layout (if any)
-				while (curr_layout < num_layout &&
-					xkb_state_layout_index_is_active(state->xkb.state,
-						curr_layout, XKB_STATE_LAYOUT_EFFECTIVE) != 1) {
-					++curr_layout;
-				}
-				// will handle invalid index if none are active
-				layout_text = xkb_keymap_layout_get_name(state->xkb.keymap, curr_layout);
-			}
-			break;
-		default:
-			break;
-		}
-
-		if (text) {
-			cairo_text_extents_t extents;
-			cairo_font_extents_t fe;
-			double x, y;
-			cairo_text_extents(cairo, text, &extents);
-			cairo_font_extents(cairo, &fe);
-			x = (buffer_width / 2) -
-				(extents.width / 2 + extents.x_bearing);
-			y = (buffer_diameter / 2) +
-				(fe.height / 2 - fe.descent);
-
-			cairo_move_to(cairo, x, y);
-			cairo_show_text(cairo, text);
-			cairo_close_path(cairo);
-			cairo_new_sub_path(cairo);
-
-			if (new_width < extents.width) {
-				new_width = extents.width;
-			}
+		if (new_width < extents.width) {
+		    new_width = extents.width;
 		}
 
 		// Typing indicator: Highlight random part on keypress
@@ -311,7 +263,7 @@ void render_frame(struct swaylock_surface *surface) {
 			}
 		}
 	}
-
+#endif
 	// Ensure buffer size is multiple of buffer scale - required by protocol
 	new_height += surface->scale - (new_height % surface->scale);
 	new_width += surface->scale - (new_width % surface->scale);
