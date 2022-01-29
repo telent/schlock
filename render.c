@@ -5,6 +5,8 @@
 #include "background-image.h"
 #include "swaylock.h"
 
+#include "pinentry.c"
+
 #define M_PI 3.14159265358979323846
 const float TYPE_INDICATOR_RANGE = M_PI / 3.0f;
 const float TYPE_INDICATOR_BORDER_THICKNESS = M_PI / 128.0f;
@@ -46,31 +48,21 @@ void render_frame_background(struct swaylock_surface *surface) {
 	wl_surface_commit(surface->surface);
 }
 
-char *digits[] = {
-    "0", "1", "2", "3",
-    "4", "5", "6", "7",
-    "8", "9", "A", "B",
-    "C", "D", "E", "F"
-};
-
 void render_frame(struct swaylock_surface *surface) {
 	struct swaylock_state *state = surface->state;
 
-	int button_rows = 4;
-	int button_cols = 4;
+	int button_rows = rows;
+	int button_cols = cols;
 
-	int arc_radius = 30 * surface->scale;
-	int arc_thickness = 4 * surface->scale;
-	int padding = 25 * surface->scale;
+	int arc_radius = button_radius * surface->scale;
+	int arc_thickness = thickness * surface->scale;
 
 	int buffer_width = surface->indicator_width;
 	int buffer_height = surface->indicator_height;
 
-	int new_width = (arc_radius + arc_thickness + padding) * 2 * button_cols;
-	int new_height = (arc_radius + arc_thickness + padding) * 2 * button_rows;
+	int new_width = pinpad_width;
+	int new_height = pinpad_height;
 
-	int first_x = (arc_radius + arc_thickness) + padding;
-	int first_y = (arc_radius + arc_thickness) + padding;
 
 	int subsurf_xpos;
 	int subsurf_ypos;
@@ -78,8 +70,6 @@ void render_frame(struct swaylock_surface *surface) {
 	// centre on the display
 	subsurf_xpos = (surface->width - new_width) / 2;
 	subsurf_ypos = (surface->height - new_height) / 2;
-
-	fprintf(stderr, "offset %d %d\n", subsurf_xpos, subsurf_xpos);
 
 
 	wl_subsurface_set_position(surface->subsurface, subsurf_xpos, subsurf_ypos);
@@ -120,17 +110,16 @@ void render_frame(struct swaylock_surface *surface) {
 		cairo_set_source_u32(cairo, 0x2020ff60);
 		cairo_set_line_width(cairo, 3.0 * surface->scale);
 
-		int x = first_x +
-		    c * ((arc_radius + arc_thickness + padding) * 2);
-		int y = first_y +
-		    r * ((arc_radius + arc_thickness + padding) * 2);
+		int x = x_for_col(c) * surface->scale;
+		int y = y_for_row(r) * surface->scale;
+
 		cairo_arc(cairo, x, y,
-			  arc_radius - arc_thickness / 3, 0, 2 * M_PI);
+			  arc_radius, 0, 2 * M_PI);
 		cairo_stroke(cairo);
 
 		cairo_set_line_width(cairo, 3.0 * surface->scale);
 		cairo_arc(cairo, x,y,
-			  arc_radius + arc_thickness / 2, 0, 2 * M_PI);
+			  arc_radius - arc_thickness, 0, 2 * M_PI);
 		cairo_stroke(cairo);
 
 		char *text = digits[c + button_cols * r];
