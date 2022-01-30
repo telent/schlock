@@ -66,3 +66,31 @@ Start schlock with `PIN_FILE=$HOME/.config/schlock.pin schlock`
   "plugging and unplugging the keyboard may crash the locker",
   most of which work this app benefits from. I may have introduced
   more bugs in the new bit, of course.
+
+## Next steps
+
+- remove some debug logging
+
+- scale to screen size (or to thumb reach? may need this to be
+configurable)
+
+- visual feedback when buttons pressed
+
+- more aesthetic "wrong password" signalling, e.g. add some padding
+  around the red background area
+
+- maybe find a better place for backspace and enter
+
+- use command line parameter for pin file location instead
+  of environment variable
+
+- try on an actual touch device instead of assuming pointer emulation
+  will work
+
+- refine the backoff timings. maybe you get three attempts before
+  the delay cuts in but then the delay is longer.
+
+- enhance mkpin:
+  - generate random PINs
+  - check PINs against blocklist
+  - write the output file, so it can set the umask
