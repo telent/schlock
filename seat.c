@@ -152,12 +152,16 @@ static void wl_pointer_motion(void *data, struct wl_pointer *wl_pointer,
 
 
 static void wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
-		uint32_t serial, uint32_t time, uint32_t button, uint32_t state) {
-    if(state != 0) {
+		uint32_t serial, uint32_t time, uint32_t button, uint32_t button_state) {
+    struct swaylock_seat *seat = data;
+    struct swaylock_state *state = seat->state;
+
+    if(button_state != 0) {
 	dragging = true;
     } else {
 	dragging = false;
-	action_for_xy(wl_fixed_to_int(last_pointer_x),
+	action_for_xy(state,
+		      wl_fixed_to_int(last_pointer_x),
 		      wl_fixed_to_int(last_pointer_y));
     }
 }
@@ -211,7 +215,7 @@ static void seat_handle_capabilities(void *data, struct wl_seat *wl_seat,
 	}
 	if ((caps & WL_SEAT_CAPABILITY_POINTER)) {
 		seat->pointer = wl_seat_get_pointer(wl_seat);
-		wl_pointer_add_listener(seat->pointer, &pointer_listener, NULL);
+		wl_pointer_add_listener(seat->pointer, &pointer_listener, seat);
 	}
 	if ((caps & WL_SEAT_CAPABILITY_KEYBOARD)) {
 		seat->keyboard = wl_seat_get_keyboard(wl_seat);

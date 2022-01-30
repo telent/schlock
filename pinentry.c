@@ -1,21 +1,25 @@
 #include "cairo.h"
 #include "swaylock.h"
+#include "loop.h"
+#include <sys/param.h>
 
 char *digits[] = {
     "0", "1", "2", "3",
     "4", "5", "6", "7",
-    "8", "9", "A", "B",
-    "C", "D", "E", "F"
+    "8", "9",
+ /* "A", "B", */
+ /*    "C", "D", "E", "F" */
 };
 
 char * backspace = "⌫";
+char * submit = "\u263a";
 
 char entered_pin[24] = { '\0' };
 
 /* these numbers are unscaled, multiply by surface->scale for px */
 
 const int button_radius = 34;
-const int cols = 4;
+const int cols = 3;
 const int thickness = 4;
 const int padding_x = 45;
 const int padding_y = 45;
@@ -72,6 +76,12 @@ void render_centered_text(cairo_t *cairo, int cx, int cy, char *text)
     cairo_stroke(cairo);
 }
 
+static time_t allow_next_attempt = 0;
+static int delay_time = 0;
+bool in_timeout() {
+    return (allow_next_attempt > time(NULL));
+}
+
 void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 {
     int sc = surface->scale;
@@ -86,7 +96,11 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 
     // Clear
     cairo_save(cairo);
-    cairo_set_source_rgba(cairo, 0, 0, 0, 0);
+    if(in_timeout()) {
+	cairo_set_source_rgba(cairo, 1, 0, 0, 0.3);
+    } else {
+	cairo_set_source_rgba(cairo, 0, 0, 0, 0);
+    }
     cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
     cairo_paint(cairo);
     cairo_restore(cairo);
@@ -124,9 +138,22 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
     }
     cairo_set_source_u32(cairo, 0xc02020ff);
     render_centered_text(cairo,
-			 x_for_col(3) * surface->scale,
-			 y_for_row(4) * surface->scale,
+			 x_for_col(cols-2) * surface->scale,
+			 y_for_row(rows-1) * surface->scale,
 			 backspace);
+
+    cairo_set_font_size(cairo, sc * button_radius * 2.20f);
+    cairo_set_source_u32(cairo, 0x000000a0);
+    render_centered_text(cairo,
+			 x_for_col(cols-1) * surface->scale,
+			 y_for_row(rows-1) * surface->scale,
+			 submit);
+    cairo_set_font_size(cairo, sc * button_radius * 2.17f);
+    cairo_set_source_u32(cairo, 0x40c040a0);
+    render_centered_text(cairo,
+			 x_for_col(cols-1) * surface->scale,
+			 y_for_row(rows-1) * surface->scale,
+			 submit);
 }
 
 static int button_for_xy(int x, int y)
@@ -156,24 +183,49 @@ void delete_digit()
     fprintf(stderr, "typed: \"%s\"\n", entered_pin);
 }
 
+void submit_pin()
+{
+    delay_time = MAX(delay_time * 2, 1);
+    allow_next_attempt = time(NULL) + delay_time;
+    fprintf(stderr, "submit, times = %ld %ld %d\n",
+	    time(NULL), allow_next_attempt, delay_time);
+    entered_pin[0] = '\0';
+
+}
+
 void enter_pin_digit(char * digit)
 {
     int offset = strlen(entered_pin);
-    if(offset + strlen(digit) < sizeof entered_pin) {
-	strcat(entered_pin, digit);
-	fprintf(stderr, "typed: \"%s\"\n", entered_pin);
-    } else {
-	fprintf(stderr, "string reached max length\n");
+    if(! in_timeout()) {
+	if(offset + strlen(digit) < sizeof entered_pin) {
+	    strcat(
+		   entered_pin, digit);
+	    fprintf(stderr, "typed: \"%s\"\n", entered_pin);
+	} else {
+	    fprintf(stderr, "string reached max length\n");
+	}
     }
 }
 
+void clear_timeout(void * data)
+{
+    struct swaylock_state *state = (struct swaylock_state *) data;
+    damage_state(state);
+}
 
-void action_for_xy(int x, int y)
+void action_for_xy(struct swaylock_state *state, int x, int y)
 {
     int b = button_for_xy(x,y);
     if((b >= 0) && (b < num_digits))
 	enter_pin_digit(digits[b]);
-    else if(b == 19)
+    else if(b == 10)
 	delete_digit();
-
+    else if(b == 11) {
+	submit_pin();
+	damage_state(state);
+	loop_add_timer(state->eventloop,
+		       1000 * delay_time,
+		       clear_timeout,
+		       state);
+    }
 }
