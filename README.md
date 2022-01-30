@@ -1,57 +1,66 @@
-# swaylock
+# Schlock
 
-swaylock is a screen locking utility for Wayland compositors. It is compatible
-with any Wayland compositor which implements the following Wayland protocols:
+>  Something, such as merchandise or literature, that is inferior or poorly made.
 
-- wlr-layer-shell
-- wlr-input-inhibitor
-- xdg-output
-- xdg-shell
+Schlock is a work of [Swaylock](README-SWAYLOCK.md) for use on
+touchscreens: instead of using keyboard entry and the user's
+regular password, it provides an onscreen numeric pad on which
+you can type your PIN. You choose a PIN while configuring the
+program: it is not connected with your regluar unix password.
 
-See the man page, `swaylock(1)`, for instructions on using swaylock.
+## Status
 
-## Release Signatures
+[Abandon all hope](https://img.shields.io/badge/abandon-all%20hope-red)
 
-Releases are signed with [B22DA89A](http://pgp.mit.edu/pks/lookup?op=vindex&search=0x52CB6609B22DA89A)
-and published [on GitHub](https://github.com/swaywm/swaylock/releases). swaylock
-releases are managed independently of sway releases.
+"[It] is both good and original; but the part that is good is not
+original, and the part that is original is not good." - Samuel
+Johnson, attrib.
+
+This is a first release. It has not been security-audited. There will
+be bugs.  There is dead code. You should read the Security section.
 
 ## Installation
 
-### From Packages
+The installation process is unchanged from
+[Swaylock](README-SWAYLOCK.md), save for the
+additional library dependency on
+[Libsodium](https://libsodium.gitbook.io/doc/installation)
 
-Swaylock is available in many distributions. Try installing the "swaylock"
-package for yours.
+## Setup
 
-If you're interested in packaging swaylock for your distribution, stop by the
-IRC channel or shoot an email to sir@cmpwn.com for advice.
+Generate a PIN file by running
 
-### Compiling from Source
+    mkpin > $HOME/.config/schlock.pin
+	chmod 0400  $HOME/.config/schlock.pin
 
-Install dependencies:
+(This is not a suggested pin file location, just an example)
 
-* meson \*
-* wayland
-* wayland-protocols \*
-* libxkbcommon
-* cairo
-* gdk-pixbuf2 \*\*
-* pam (optional)
-* [scdoc](https://git.sr.ht/~sircmpwn/scdoc) (optional: man pages) \*
-* git \*
+Start schlock with `PIN_FILE=$HOME/.config/schlock.pin schlock`
 
-_\*Compile-time dep_
+## Security
 
-_\*\*optional: required for background images other than PNG_
+* The threat model is "my five year old child picks up my phone and
+  starts pressing things at random". If your attacker is older than
+  five (or is especially precocious) this app may not address your
+  needs.
 
-Run these commands:
+* [The security of customer-chosen banking
+  PINs](https://www.cl.cam.ac.uk/~rja14/Papers/BPA12-FC-banking_pin_security.pdf)
+  by Joseph Bonneau, S̈oren Preibusch, and Ross Anderson finds that we
+  should expect a competent attacker to guess one in around every 15
+  customer-chosen PINS. My takeaway from reading that is that you
+  should generate a PIN randomly instead of choosing a "memorable"
+  one, and you should reject the PIN and generate another if it
+  is listed in their suggested blocklist (Appx B).
 
-    meson build
-    ninja -C build
-    sudo ninja -C build install
+* Even an arbitrary four or six digit numeric PIN is always going to
+  be more guessable than a long alphanumeric password. Schlock tries
+  to mitigate this for online attacks by enforcing a timeout between
+  failed attempts, and for offline attacks by hashing the secret using
+  Argon2 (via libsodium).
 
-On systems without PAM, you need to suid the swaylock binary:
-
-    sudo chmod a+s /usr/local/bin/swaylock
-
-Swaylock will drop root permissions shortly after startup.
+* There has been significant effort by other people working on
+  Swaylock and the Wayland protocols/lbraries to fix bugs like
+  "plugging and unplugging the keyboard may crash the locker",
+  most of which work this app benefits from. I may have introduced
+  more bugs in the new bit, of course.
