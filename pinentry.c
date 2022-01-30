@@ -20,14 +20,14 @@ char entered_pin[24] = { '\0' };
 
 /* these numbers are unscaled, multiply by surface->scale for px */
 
-const int button_radius = 34;
+const int button_radius = 35;
 const int cols = 3;
-const int thickness = 4;
-const int padding_x = 45;
-const int padding_y = 45;
+const int thickness = 2;
+const int padding_x = 20;
+const int padding_y = 15;
 const int num_digits = sizeof(digits) / sizeof(digits[0]);
 const int rows = 1 + (num_digits / cols) ;
-const int feedback_height = 140;
+const int feedback_height = 40;
 
 /* the '+ 2' here is because we draw with a 2 pixel pen, so the
  * dimensions of the stroke centres is less than the size of the
@@ -37,7 +37,9 @@ const int pinpad_width =  (2 +
 			   cols * (2 * button_radius) +
 			   (cols - 1) * padding_x);
 
-const int pinpad_height = (2 +
+/* the 8 is a fudge, need to find out whh the bottom edge is being
+   clipped */
+const int pinpad_height = (8 +
 			   rows * (2 * button_radius) +
 			   (rows - 1) * padding_y +
 			   feedback_height);
