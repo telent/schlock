@@ -68,11 +68,12 @@ Start schlock with `PIN_FILE=$HOME/.config/schlock.pin schlock`
   failed attempts, and for offline attacks by hashing the secret using
   Argon2 (via libsodium).
 
-* There has been significant effort by other people working on
-  Swaylock and the Wayland protocols/lbraries to fix bugs like
-  "plugging and unplugging the keyboard may crash the locker",
+* Swaylock is mature code. There has been significant effort (by other
+  people) on Swaylock and the Wayland protocols/libraries to fix bugs
+  like "plugging and unplugging the keyboard may crash the locker",
   most of which work this app benefits from. I may have introduced
   more bugs in the new bit, of course.
+
 
 ## Next steps
 
@@ -80,8 +81,6 @@ Start schlock with `PIN_FILE=$HOME/.config/schlock.pin schlock`
 
 - scale to screen size (or to thumb reach? may need this to be
 configurable)
-
-- visual feedback when buttons pressed
 
 - more aesthetic "wrong password" signalling, e.g. add some padding
   around the red background area
