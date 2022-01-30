@@ -27,23 +27,6 @@
 #include "wlr-layer-shell-unstable-v1-client-protocol.h"
 #include "xdg-output-unstable-v1-client-protocol.h"
 
-static uint32_t parse_color(const char *color) {
-	if (color[0] == '#') {
-		++color;
-	}
-
-	int len = strlen(color);
-	if (len != 6 && len != 8) {
-		swaylock_log(LOG_DEBUG, "Invalid color %s, defaulting to 0xFFFFFFFF",
-				color);
-		return 0xFFFFFFFF;
-	}
-	uint32_t res = (uint32_t)strtoul(color, NULL, 16);
-	if (strlen(color) == 6) {
-		res = (res << 8) | 0xFF;
-	}
-	return res;
-}
 
 int lenient_strcmp(char *a, char *b) {
 	if (a == b) {
@@ -503,103 +486,21 @@ enum line_mode {
 
 static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		enum line_mode *line_mode, char **config_path) {
-	enum long_option_codes {
-		LO_BS_HL_COLOR = 256,
-		LO_CAPS_LOCK_BS_HL_COLOR,
-		LO_CAPS_LOCK_KEY_HL_COLOR,
-		LO_FONT,
-		LO_FONT_SIZE,
-		LO_IND_IDLE_VISIBLE,
-		LO_IND_RADIUS,
-		LO_IND_X_POSITION,
-		LO_IND_Y_POSITION,
-		LO_IND_THICKNESS,
-		LO_INSIDE_COLOR,
-		LO_INSIDE_CLEAR_COLOR,
-		LO_INSIDE_CAPS_LOCK_COLOR,
-		LO_INSIDE_VER_COLOR,
-		LO_INSIDE_WRONG_COLOR,
-		LO_KEY_HL_COLOR,
-		LO_LAYOUT_TXT_COLOR,
-		LO_LAYOUT_BG_COLOR,
-		LO_LAYOUT_BORDER_COLOR,
-		LO_LINE_COLOR,
-		LO_LINE_CLEAR_COLOR,
-		LO_LINE_CAPS_LOCK_COLOR,
-		LO_LINE_VER_COLOR,
-		LO_LINE_WRONG_COLOR,
-		LO_RING_COLOR,
-		LO_RING_CLEAR_COLOR,
-		LO_RING_CAPS_LOCK_COLOR,
-		LO_RING_VER_COLOR,
-		LO_RING_WRONG_COLOR,
-		LO_SEP_COLOR,
-		LO_TEXT_COLOR,
-		LO_TEXT_CLEAR_COLOR,
-		LO_TEXT_CAPS_LOCK_COLOR,
-		LO_TEXT_VER_COLOR,
-		LO_TEXT_WRONG_COLOR,
-	};
 
 	static struct option long_options[] = {
 		{"config", required_argument, NULL, 'C'},
-		{"color", required_argument, NULL, 'c'},
 		{"debug", no_argument, NULL, 'd'},
-		{"ignore-empty-password", no_argument, NULL, 'e'},
 		{"daemonize", no_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
 		{"image", required_argument, NULL, 'i'},
-		{"disable-caps-lock-text", no_argument, NULL, 'L'},
-		{"indicator-caps-lock", no_argument, NULL, 'l'},
-		{"line-uses-inside", no_argument, NULL, 'n'},
-		{"line-uses-ring", no_argument, NULL, 'r'},
 		{"scaling", required_argument, NULL, 's'},
 		{"tiling", no_argument, NULL, 't'},
-		{"no-unlock-indicator", no_argument, NULL, 'u'},
-		{"show-keyboard-layout", no_argument, NULL, 'k'},
-		{"hide-keyboard-layout", no_argument, NULL, 'K'},
-		{"show-failed-attempts", no_argument, NULL, 'F'},
 		{"version", no_argument, NULL, 'v'},
-		{"bs-hl-color", required_argument, NULL, LO_BS_HL_COLOR},
-		{"caps-lock-bs-hl-color", required_argument, NULL, LO_CAPS_LOCK_BS_HL_COLOR},
-		{"caps-lock-key-hl-color", required_argument, NULL, LO_CAPS_LOCK_KEY_HL_COLOR},
-		{"font", required_argument, NULL, LO_FONT},
-		{"font-size", required_argument, NULL, LO_FONT_SIZE},
-		{"indicator-idle-visible", no_argument, NULL, LO_IND_IDLE_VISIBLE},
-		{"indicator-radius", required_argument, NULL, LO_IND_RADIUS},
-		{"indicator-thickness", required_argument, NULL, LO_IND_THICKNESS},
-		{"indicator-x-position", required_argument, NULL, LO_IND_X_POSITION},
-		{"indicator-y-position", required_argument, NULL, LO_IND_Y_POSITION},
-		{"inside-color", required_argument, NULL, LO_INSIDE_COLOR},
-		{"inside-clear-color", required_argument, NULL, LO_INSIDE_CLEAR_COLOR},
-		{"inside-caps-lock-color", required_argument, NULL, LO_INSIDE_CAPS_LOCK_COLOR},
-		{"inside-ver-color", required_argument, NULL, LO_INSIDE_VER_COLOR},
-		{"inside-wrong-color", required_argument, NULL, LO_INSIDE_WRONG_COLOR},
-		{"key-hl-color", required_argument, NULL, LO_KEY_HL_COLOR},
-		{"layout-bg-color", required_argument, NULL, LO_LAYOUT_BG_COLOR},
-		{"layout-border-color", required_argument, NULL, LO_LAYOUT_BORDER_COLOR},
-		{"layout-text-color", required_argument, NULL, LO_LAYOUT_TXT_COLOR},
-		{"line-color", required_argument, NULL, LO_LINE_COLOR},
-		{"line-clear-color", required_argument, NULL, LO_LINE_CLEAR_COLOR},
-		{"line-caps-lock-color", required_argument, NULL, LO_LINE_CAPS_LOCK_COLOR},
-		{"line-ver-color", required_argument, NULL, LO_LINE_VER_COLOR},
-		{"line-wrong-color", required_argument, NULL, LO_LINE_WRONG_COLOR},
-		{"ring-color", required_argument, NULL, LO_RING_COLOR},
-		{"ring-clear-color", required_argument, NULL, LO_RING_CLEAR_COLOR},
-		{"ring-caps-lock-color", required_argument, NULL, LO_RING_CAPS_LOCK_COLOR},
-		{"ring-ver-color", required_argument, NULL, LO_RING_VER_COLOR},
-		{"ring-wrong-color", required_argument, NULL, LO_RING_WRONG_COLOR},
-		{"separator-color", required_argument, NULL, LO_SEP_COLOR},
-		{"text-color", required_argument, NULL, LO_TEXT_COLOR},
-		{"text-clear-color", required_argument, NULL, LO_TEXT_CLEAR_COLOR},
-		{"text-caps-lock-color", required_argument, NULL, LO_TEXT_CAPS_LOCK_COLOR},
-		{"text-ver-color", required_argument, NULL, LO_TEXT_VER_COLOR},
-		{"text-wrong-color", required_argument, NULL, LO_TEXT_WRONG_COLOR},
 		{0, 0, 0, 0}
 	};
 
 	const char usage[] =
-		"Usage: swaylock [options...]\n"
+		"Usage: schlock [options...]\n"
 		"\n"
 		"  -C, --config <config_file>       "
 			"Path to the config file.\n"
@@ -607,114 +508,18 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Turn the screen into the given color instead of white.\n"
 		"  -d, --debug                      "
 			"Enable debugging output.\n"
-		"  -e, --ignore-empty-password      "
-			"When an empty password is provided, do not validate it.\n"
-		"  -F, --show-failed-attempts       "
-			"Show current count of failed authentication attempts.\n"
 		"  -f, --daemonize                  "
 			"Detach from the controlling terminal after locking.\n"
 		"  -h, --help                       "
 			"Show help message and quit.\n"
 		"  -i, --image [[<output>]:]<path>  "
 			"Display the given image, optionally only on the given output.\n"
-		"  -k, --show-keyboard-layout       "
-			"Display the current xkb layout while typing.\n"
-		"  -K, --hide-keyboard-layout       "
-			"Hide the current xkb layout while typing.\n"
-		"  -L, --disable-caps-lock-text     "
-			"Disable the Caps Lock text.\n"
-		"  -l, --indicator-caps-lock        "
-			"Show the current Caps Lock state also on the indicator.\n"
 		"  -s, --scaling <mode>             "
 			"Image scaling mode: stretch, fill, fit, center, tile, solid_color.\n"
 		"  -t, --tiling                     "
 			"Same as --scaling=tile.\n"
-		"  -u, --no-unlock-indicator        "
-			"Disable the unlock indicator.\n"
 		"  -v, --version                    "
 			"Show the version number and quit.\n"
-		"  --bs-hl-color <color>            "
-			"Sets the color of backspace highlight segments.\n"
-		"  --caps-lock-bs-hl-color <color>  "
-			"Sets the color of backspace highlight segments when Caps Lock "
-			"is active.\n"
-		"  --caps-lock-key-hl-color <color> "
-			"Sets the color of the key press highlight segments when "
-			"Caps Lock is active.\n"
-		"  --font <font>                    "
-			"Sets the font of the text.\n"
-		"  --font-size <size>               "
-			"Sets a fixed font size for the indicator text.\n"
-		"  --indicator-idle-visible         "
-			"Sets the indicator to show even if idle.\n"
-		"  --indicator-radius <radius>      "
-			"Sets the indicator radius.\n"
-		"  --indicator-thickness <thick>    "
-			"Sets the indicator thickness.\n"
-		"  --indicator-x-position <x>       "
-			"Sets the horizontal position of the indicator.\n"
-		"  --indicator-y-position <y>       "
-			"Sets the vertical position of the indicator.\n"
-		"  --inside-color <color>           "
-			"Sets the color of the inside of the indicator.\n"
-		"  --inside-clear-color <color>     "
-			"Sets the color of the inside of the indicator when cleared.\n"
-		"  --inside-caps-lock-color <color> "
-			"Sets the color of the inside of the indicator when Caps Lock "
-			"is active.\n"
-		"  --inside-ver-color <color>       "
-			"Sets the color of the inside of the indicator when verifying.\n"
-		"  --inside-wrong-color <color>     "
-			"Sets the color of the inside of the indicator when invalid.\n"
-		"  --key-hl-color <color>           "
-			"Sets the color of the key press highlight segments.\n"
-		"  --layout-bg-color <color>        "
-			"Sets the background color of the box containing the layout text.\n"
-		"  --layout-border-color <color>    "
-			"Sets the color of the border of the box containing the layout text.\n"
-		"  --layout-text-color <color>      "
-			"Sets the color of the layout text.\n"
-		"  --line-color <color>             "
-			"Sets the color of the line between the inside and ring.\n"
-		"  --line-clear-color <color>       "
-			"Sets the color of the line between the inside and ring when "
-			"cleared.\n"
-		"  --line-caps-lock-color <color>   "
-			"Sets the color of the line between the inside and ring when "
-			"Caps Lock is active.\n"
-		"  --line-ver-color <color>         "
-			"Sets the color of the line between the inside and ring when "
-			"verifying.\n"
-		"  --line-wrong-color <color>       "
-			"Sets the color of the line between the inside and ring when "
-			"invalid.\n"
-		"  -n, --line-uses-inside           "
-			"Use the inside color for the line between the inside and ring.\n"
-		"  -r, --line-uses-ring             "
-			"Use the ring color for the line between the inside and ring.\n"
-		"  --ring-color <color>             "
-			"Sets the color of the ring of the indicator.\n"
-		"  --ring-clear-color <color>       "
-			"Sets the color of the ring of the indicator when cleared.\n"
-		"  --ring-caps-lock-color <color>   "
-			"Sets the color of the ring of the indicator when Caps Lock "
-			"is active.\n"
-		"  --ring-ver-color <color>         "
-			"Sets the color of the ring of the indicator when verifying.\n"
-		"  --ring-wrong-color <color>       "
-			"Sets the color of the ring of the indicator when invalid.\n"
-		"  --separator-color <color>        "
-			"Sets the color of the lines that separate highlight segments.\n"
-		"  --text-color <color>             "
-			"Sets the color of the text.\n"
-		"  --text-clear-color <color>       "
-			"Sets the color of the text when cleared.\n"
-		"  --text-caps-lock-color <color>   "
-			"Sets the color of the text when Caps Lock is active.\n"
-		"  --text-ver-color <color>         "
-			"Sets the color of the text when verifying.\n"
-		"  --text-wrong-color <color>       "
-			"Sets the color of the text when invalid.\n"
 		"\n"
 		"All <color> options are of the form <rrggbb[aa]>.\n";
 
@@ -722,7 +527,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:deFfhi:kKLlnrs:tuvC:", long_options,
+		c = getopt_long(argc, argv, "c:dfhi:s:tvC:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -733,23 +538,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				*config_path = strdup(optarg);
 			}
 			break;
-		case 'c':
-			if (state) {
-				state->args.colors.background = parse_color(optarg);
-			}
-			break;
 		case 'd':
 			swaylock_log_init(LOG_DEBUG);
-			break;
-		case 'e':
-			if (state) {
-				state->args.ignore_empty = true;
-			}
-			break;
-		case 'F':
-			if (state) {
-				state->args.show_failed_attempts = true;
-			}
 			break;
 		case 'f':
 			if (state) {
@@ -759,36 +549,6 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'i':
 			if (state) {
 				load_image(optarg, state);
-			}
-			break;
-		case 'k':
-			if (state) {
-				state->args.show_keyboard_layout = true;
-			}
-			break;
-		case 'K':
-			if (state) {
-				state->args.hide_keyboard_layout = true;
-			}
-			break;
-		case 'L':
-			if (state) {
-				state->args.show_caps_lock_text = false;
-			}
-			break;
-		case 'l':
-			if (state) {
-				state->args.show_caps_lock_indicator = true;
-			}
-			break;
-		case 'n':
-			if (line_mode) {
-				*line_mode = LM_INSIDE;
-			}
-			break;
-		case 'r':
-			if (line_mode) {
-				*line_mode = LM_RING;
 			}
 			break;
 		case 's':
@@ -804,192 +564,9 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				state->args.mode = BACKGROUND_MODE_TILE;
 			}
 			break;
-		case 'u':
-			if (state) {
-				state->args.show_indicator = false;
-			}
-			break;
 		case 'v':
 			fprintf(stdout, "swaylock version " SWAYLOCK_VERSION "\n");
 			exit(EXIT_SUCCESS);
-			break;
-		case LO_BS_HL_COLOR:
-			if (state) {
-				state->args.colors.bs_highlight = parse_color(optarg);
-			}
-			break;
-		case LO_CAPS_LOCK_BS_HL_COLOR:
-			if (state) {
-				state->args.colors.caps_lock_bs_highlight = parse_color(optarg);
-			}
-			break;
-		case LO_CAPS_LOCK_KEY_HL_COLOR:
-			if (state) {
-				state->args.colors.caps_lock_key_highlight = parse_color(optarg);
-			}
-			break;
-		case LO_FONT:
-			if (state) {
-				free(state->args.font);
-				state->args.font = strdup(optarg);
-			}
-			break;
-		case LO_FONT_SIZE:
-			if (state) {
-				state->args.font_size = atoi(optarg);
-			}
-			break;
-		case LO_IND_IDLE_VISIBLE:
-			if (state) {
-				state->args.indicator_idle_visible = true;
-			}
-			break;
-		case LO_IND_RADIUS:
-			if (state) {
-				state->args.radius = strtol(optarg, NULL, 0);
-			}
-			break;
-		case LO_IND_THICKNESS:
-			if (state) {
-				state->args.thickness = strtol(optarg, NULL, 0);
-			}
-			break;
-		case LO_IND_X_POSITION:
-			if (state) {
-				state->args.override_indicator_x_position = true;
-				state->args.indicator_x_position = atoi(optarg);
-			}
-			break;
-		case LO_IND_Y_POSITION:
-			if (state) {
-				state->args.override_indicator_y_position = true;
-				state->args.indicator_y_position = atoi(optarg);
-			}
-			break;
-		case LO_INSIDE_COLOR:
-			if (state) {
-				state->args.colors.inside.input = parse_color(optarg);
-			}
-			break;
-		case LO_INSIDE_CLEAR_COLOR:
-			if (state) {
-				state->args.colors.inside.cleared = parse_color(optarg);
-			}
-			break;
-		case LO_INSIDE_CAPS_LOCK_COLOR:
-			if (state) {
-				state->args.colors.inside.caps_lock = parse_color(optarg);
-			}
-			break;
-		case LO_INSIDE_VER_COLOR:
-			if (state) {
-				state->args.colors.inside.verifying = parse_color(optarg);
-			}
-			break;
-		case LO_INSIDE_WRONG_COLOR:
-			if (state) {
-				state->args.colors.inside.wrong = parse_color(optarg);
-			}
-			break;
-		case LO_KEY_HL_COLOR:
-			if (state) {
-				state->args.colors.key_highlight = parse_color(optarg);
-			}
-			break;
-		case LO_LAYOUT_BG_COLOR:
-			if (state) {
-				state->args.colors.layout_background = parse_color(optarg);
-			}
-			break;
-		case LO_LAYOUT_BORDER_COLOR:
-			if (state) {
-				state->args.colors.layout_border = parse_color(optarg);
-			}
-			break;
-		case LO_LAYOUT_TXT_COLOR:
-			if (state) {
-				state->args.colors.layout_text = parse_color(optarg);
-			}
-			break;
-		case LO_LINE_COLOR:
-			if (state) {
-				state->args.colors.line.input = parse_color(optarg);
-			}
-			break;
-		case LO_LINE_CLEAR_COLOR:
-			if (state) {
-				state->args.colors.line.cleared = parse_color(optarg);
-			}
-			break;
-		case LO_LINE_CAPS_LOCK_COLOR:
-			if (state) {
-				state->args.colors.line.caps_lock = parse_color(optarg);
-			}
-			break;
-		case LO_LINE_VER_COLOR:
-			if (state) {
-				state->args.colors.line.verifying = parse_color(optarg);
-			}
-			break;
-		case LO_LINE_WRONG_COLOR:
-			if (state) {
-				state->args.colors.line.wrong = parse_color(optarg);
-			}
-			break;
-		case LO_RING_COLOR:
-			if (state) {
-				state->args.colors.ring.input = parse_color(optarg);
-			}
-			break;
-		case LO_RING_CLEAR_COLOR:
-			if (state) {
-				state->args.colors.ring.cleared = parse_color(optarg);
-			}
-			break;
-		case LO_RING_CAPS_LOCK_COLOR:
-			if (state) {
-				state->args.colors.ring.caps_lock = parse_color(optarg);
-			}
-			break;
-		case LO_RING_VER_COLOR:
-			if (state) {
-				state->args.colors.ring.verifying = parse_color(optarg);
-			}
-			break;
-		case LO_RING_WRONG_COLOR:
-			if (state) {
-				state->args.colors.ring.wrong = parse_color(optarg);
-			}
-			break;
-		case LO_SEP_COLOR:
-			if (state) {
-				state->args.colors.separator = parse_color(optarg);
-			}
-			break;
-		case LO_TEXT_COLOR:
-			if (state) {
-				state->args.colors.text.input = parse_color(optarg);
-			}
-			break;
-		case LO_TEXT_CLEAR_COLOR:
-			if (state) {
-				state->args.colors.text.cleared = parse_color(optarg);
-			}
-			break;
-		case LO_TEXT_CAPS_LOCK_COLOR:
-			if (state) {
-				state->args.colors.text.caps_lock = parse_color(optarg);
-			}
-			break;
-		case LO_TEXT_VER_COLOR:
-			if (state) {
-				state->args.colors.text.verifying = parse_color(optarg);
-			}
-			break;
-		case LO_TEXT_WRONG_COLOR:
-			if (state) {
-				state->args.colors.text.wrong = parse_color(optarg);
-			}
 			break;
 		default:
 			fprintf(stderr, "%s", usage);
@@ -1084,7 +661,6 @@ static void display_in(int fd, short mask, void *data) {
 	}
 }
 
-
 int main(int argc, char **argv) {
 	swaylock_log_init(LOG_ERROR);
 	srand(time(NULL));
@@ -1093,22 +669,6 @@ int main(int argc, char **argv) {
 	state.failed_attempts = 0;
 	state.args = (struct swaylock_args){
 		.mode = BACKGROUND_MODE_FILL,
-		.font = strdup("sans-serif"),
-		.font_size = 0,
-		.radius = 50,
-		.thickness = 10,
-		.indicator_x_position = 0,
-		.indicator_y_position = 0,
-		.override_indicator_x_position = false,
-		.override_indicator_y_position = false,
-		.ignore_empty = false,
-		.show_indicator = true,
-		.show_caps_lock_indicator = false,
-		.show_caps_lock_text = true,
-		.show_keyboard_layout = false,
-		.hide_keyboard_layout = false,
-		.show_failed_attempts = false,
-		.indicator_idle_visible = false
 	};
 	wl_list_init(&state.images);
 	set_default_colors(&state.args.colors);
@@ -1128,7 +688,6 @@ int main(int argc, char **argv) {
 		int config_status = load_config(config_path, &state, &line_mode);
 		free(config_path);
 		if (config_status != 0) {
-			free(state.args.font);
 			return config_status;
 		}
 	}
@@ -1137,7 +696,6 @@ int main(int argc, char **argv) {
 		swaylock_log(LOG_DEBUG, "Parsing CLI Args");
 		int result = parse_options(argc, argv, &state, &line_mode, NULL);
 		if (result != 0) {
-			free(state.args.font);
 			return result;
 		}
 	}
@@ -1160,7 +718,6 @@ int main(int argc, char **argv) {
 	state.xkb.context = xkb_context_new(XKB_CONTEXT_NO_FLAGS);
 	state.display = wl_display_connect(NULL);
 	if (!state.display) {
-		free(state.args.font);
 		swaylock_log(LOG_ERROR, "Unable to connect to the compositor. "
 				"If your compositor is running, check or set the "
 				"WAYLAND_DISPLAY environment variable.");
@@ -1172,7 +729,6 @@ int main(int argc, char **argv) {
 	wl_display_roundtrip(state.display);
 	assert(state.compositor && state.layer_shell && state.shm);
 	if (!state.input_inhibit_manager) {
-		free(state.args.font);
 		swaylock_log(LOG_ERROR, "Compositor does not support the input "
 				"inhibitor protocol, refusing to run insecurely");
 		return 1;
@@ -1180,7 +736,6 @@ int main(int argc, char **argv) {
 
 	zwlr_input_inhibit_manager_v1_get_inhibitor(state.input_inhibit_manager);
 	if (wl_display_roundtrip(state.display) == -1) {
-		free(state.args.font);
 		swaylock_log(LOG_ERROR, "Exiting - failed to inhibit input:"
 				" is another lockscreen already running?");
 		return 2;
@@ -1224,6 +779,5 @@ int main(int argc, char **argv) {
 		loop_poll(state.eventloop);
 	}
 
-	free(state.args.font);
 	return 0;
 }
