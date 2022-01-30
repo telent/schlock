@@ -43,6 +43,7 @@ gdk_pixbuf     = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf')
 bash_comp      = dependency('bash-completion', required: false)
 fish_comp      = dependency('fish', required: false)
 libpam         = cc.find_library('pam', required: get_option('pam'))
+libsodium      = cc.find_library('sodium')
 crypt          = cc.find_library('crypt', required: not libpam.found())
 math           = cc.find_library('m')
 
@@ -119,6 +120,7 @@ dependencies = [
 	math,
 	xkbcommon,
 	wayland_client,
+	libsodium
 ]
 
 sources = [
@@ -154,6 +156,14 @@ executable('swaylock',
 	dependencies: dependencies,
 	install: true
 )
+
+executable('mkpin',
+	['mkpin.c'],
+	include_directories: [swaylock_inc],
+	dependencies: [libsodium],
+	install: true
+)
+
 
 install_data(
 	'pam/swaylock',

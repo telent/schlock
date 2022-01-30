@@ -2,6 +2,8 @@
 #include "swaylock.h"
 #include "loop.h"
 #include <sys/param.h>
+#include <sodium.h>
+#include <fcntl.h>
 
 char *digits[] = {
     "0", "1", "2", "3",
@@ -183,14 +185,35 @@ void delete_digit()
     fprintf(stderr, "typed: \"%s\"\n", entered_pin);
 }
 
+
+bool is_wrong_pin(char *entered, char *expected)
+{
+    fprintf(stderr, "entered %s %ld expected \"%s\"",
+	    entered, strlen(entered), expected);
+    return
+	crypto_pwhash_str_verify(expected, entered, strlen(entered));
+}
+
 void submit_pin()
 {
-    delay_time = MAX(delay_time * 2, 1);
-    allow_next_attempt = time(NULL) + delay_time;
-    fprintf(stderr, "submit, times = %ld %ld %d\n",
-	    time(NULL), allow_next_attempt, delay_time);
-    entered_pin[0] = '\0';
+    char expected[crypto_pwhash_STRBYTES];
 
+    int pw_file = open(getenv("PIN_FILE"), O_RDONLY);
+
+    if(pw_file < 0) return;
+    read(pw_file, expected, sizeof expected);
+    char *p = strchr(expected, '\n');
+    if(p) *p = '\0';
+
+    if(is_wrong_pin(entered_pin, expected)) {
+	delay_time = MAX(delay_time * 2, 1);
+	allow_next_attempt = time(NULL) + delay_time;
+	fprintf(stderr, "submit, times = %ld %ld %d\n",
+		time(NULL), allow_next_attempt, delay_time);
+	entered_pin[0] = '\0';
+    } else {
+	exit(0);
+    }
 }
 
 void enter_pin_digit(char * digit)
