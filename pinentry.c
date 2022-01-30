@@ -27,6 +27,7 @@ const int padding_x = 45;
 const int padding_y = 45;
 const int num_digits = sizeof(digits) / sizeof(digits[0]);
 const int rows = 1 + (num_digits / cols) ;
+const int feedback_height = 140;
 
 /* the '+ 2' here is because we draw with a 2 pixel pen, so the
  * dimensions of the stroke centres is less than the size of the
@@ -36,9 +37,10 @@ const int pinpad_width =  (2 +
 			   cols * (2 * button_radius) +
 			   (cols - 1) * padding_x);
 
-const int pinpad_height =  (2 +
-			    rows * (2 * button_radius) +
-			    (rows - 1) * padding_y);
+const int pinpad_height = (2 +
+			   rows * (2 * button_radius) +
+			   (rows - 1) * padding_y +
+			   feedback_height);
 
 #define M_PI 3.14159265358979323846
 
@@ -57,7 +59,8 @@ static int x_for_col(int col)
 }
 static int y_for_row(int row)
 {
-    return 1 + button_radius + row * (2 * button_radius + padding_y);
+    return 40 + 1 +
+	feedback_height + row * (2 * button_radius + padding_y);
 }
 
 void render_centered_text(cairo_t *cairo, int cx, int cy, char *text)
@@ -84,8 +87,21 @@ bool in_timeout() {
     return (allow_next_attempt > time(NULL));
 }
 
+float frand(float min, float max)
+{
+    float r = (float) rand();
+    return (r * (max-min) / RAND_MAX) + min;
+}
+
+static inline unsigned rol(unsigned r, int k) {
+    return (r << k) | (r >> (32 - k));
+}
+
 void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 {
+    if(allow_next_attempt == 0)
+	allow_next_attempt = time(NULL)-1;
+
     int sc = surface->scale;
     cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
     cairo_font_options_t *fo = cairo_font_options_create();
@@ -110,6 +126,45 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
     cairo_select_font_face(cairo, "sans-serif",
 			   CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cairo, sc * button_radius * 1.2f);
+
+
+    if(entered_pin[0]) {
+	int feedback_magn = feedback_height/2;
+
+	/* This is probably quite silly. The goal here is that within
+	 * a single pin entry attempt ("submit" not pressed) the same
+	 * curve should be drawn for the same entered_pin, but that
+	 * different curves are drawn on subsequent attempts
+	 */
+
+	unsigned int seed = (unsigned int) allow_next_attempt;
+	for(size_t i=0; i < strlen(entered_pin); i++) {
+	    seed ^= entered_pin[i];
+	    seed = rol(seed, 5);
+	}
+	srand(seed);
+
+	cairo_set_source_rgba(cairo,
+			      frand(0.4,1),
+			      frand(0.4,1),
+			      frand(0.4,1),
+			      1.0);
+
+	cairo_set_line_width(cairo, 9.0 * surface->scale);
+	cairo_move_to(cairo, 10, feedback_magn);
+	cairo_curve_to(cairo,
+		       frand(pinpad_width * 0.33 - 20,
+			     pinpad_width * 0.33 + 20),
+		       frand(0, feedback_height),
+
+		       frand(pinpad_width * 0.67 - 20,
+			     pinpad_width * 0.67 + 20),
+		       frand(0, feedback_height),
+
+		       pinpad_width - 10,
+		       feedback_magn);
+	cairo_stroke(cairo);
+    }
 
     for(int i = 0; i < num_digits; i ++) {
 	int r = i / cols;
@@ -160,7 +215,7 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 
 static int button_for_xy(int x, int y)
 {
-
+    y -= feedback_height;
     float colf = 1.0 * (x - button_radius) /
 	(button_radius * 2 + padding_x);
     int col = (int) (floor(colf + 0.5));
@@ -197,6 +252,7 @@ void submit_pin()
 
     int pw_file = open(getenv("PIN_FILE"), O_RDONLY);
 
+    // need a better way to report missing file
     if(pw_file < 0) return;
     read(pw_file, expected, sizeof expected);
     char *p = strchr(expected, '\n');

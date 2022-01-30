@@ -163,6 +163,7 @@ static void wl_pointer_button(void *data, struct wl_pointer *wl_pointer,
 	action_for_xy(state,
 		      wl_fixed_to_int(last_pointer_x),
 		      wl_fixed_to_int(last_pointer_y));
+	damage_state(state);
     }
 }
 
