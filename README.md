@@ -28,6 +28,13 @@ The installation process is unchanged from
 additional library dependency on
 [Libsodium](https://libsodium.gitbook.io/doc/installation)
 
+For Nix users, you should be able to run
+
+    nix-build -E 'with import <nixpkgs> {} ; callPackage ./. {}'
+
+in this directory.
+
+
 ## Setup
 
 Generate a PIN file by running
@@ -53,7 +60,7 @@ Start schlock with `PIN_FILE=$HOME/.config/schlock.pin schlock`
   customer-chosen PINS. My takeaway from reading that is that you
   should generate a PIN randomly instead of choosing a "memorable"
   one, and you should reject the PIN and generate another if it
-  is listed in their suggested blocklist (Appx B).
+  appears in their suggested blocklist (Appx B).
 
 * Even an arbitrary four or six digit numeric PIN is always going to
   be more guessable than a long alphanumeric password. Schlock tries
@@ -79,7 +86,7 @@ configurable)
 - more aesthetic "wrong password" signalling, e.g. add some padding
   around the red background area
 
-- maybe find a better place for backspace and enter
+- maybe find a better place to put backspace and enter
 
 - use command line parameter for pin file location instead
   of environment variable
@@ -90,7 +97,7 @@ configurable)
 - refine the backoff timings. maybe you get three attempts before
   the delay cuts in but then the delay is longer.
 
-- enhance mkpin:
+- enhance mkpin: ("good first PR" :-)
   - generate random PINs
   - check PINs against blocklist
   - write the output file, so it can set the umask
