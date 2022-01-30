@@ -64,7 +64,7 @@ void render_frame(struct swaylock_surface *surface) {
 	surface->current_buffer = get_next_buffer(state->shm,
 						  surface->indicator_buffers, buffer_width, buffer_height);
 	if (surface->current_buffer == NULL) {
-	    return;
+		return;
 	}
 
 	// Hide subsurface until we want it visible
@@ -78,11 +78,11 @@ void render_frame(struct swaylock_surface *surface) {
 	new_width += surface->scale - (new_width % surface->scale);
 
 	if (buffer_width != new_width || buffer_height != new_height) {
-	    destroy_buffer(surface->current_buffer);
-	    surface->indicator_width = new_width;
-	    surface->indicator_height = new_height;
-	    render_frame(surface);
-	    return;
+		destroy_buffer(surface->current_buffer);
+		surface->indicator_width = new_width;
+		surface->indicator_height = new_height;
+		render_frame(surface);
+		return;
 	}
 
 	wl_surface_set_buffer_scale(surface->child, surface->scale);
