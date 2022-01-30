@@ -236,8 +236,6 @@ void delete_digit()
     int offset = strlen(entered_pin);
     if(offset > 0)
 	entered_pin[offset - 1] = '\0';
-
-    fprintf(stderr, "typed: \"%s\"\n", entered_pin);
 }
 
 bool is_wrong_pin(char *entered, char *expected)
@@ -271,14 +269,10 @@ void submit_pin()
 
 void enter_pin_digit(char * digit)
 {
-    int offset = strlen(entered_pin);
     if(! in_timeout()) {
+	int offset = strlen(entered_pin);
 	if(offset + strlen(digit) < sizeof entered_pin) {
-	    strcat(
-		   entered_pin, digit);
-	    fprintf(stderr, "typed: \"%s\"\n", entered_pin);
-	} else {
-	    fprintf(stderr, "string reached max length\n");
+	    strcpy(entered_pin + offset, digit);
 	}
     }
 }
