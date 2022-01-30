@@ -2,22 +2,23 @@
 
 >  Something, such as merchandise or literature, that is inferior or poorly made.
 
-Schlock is a work of [Swaylock](README-SWAYLOCK.md) for use on
+Schlock is a fork of [Swaylock](README-SWAYLOCK.md) for use on
 touchscreens: instead of using keyboard entry and the user's
 regular password, it provides an onscreen numeric pad on which
 you can type your PIN. You choose a PIN while configuring the
-program: it is not connected with your regluar unix password.
+program: it is not connected with your regular Unix password.
 
 ## Status
 
-[Abandon all hope](https://img.shields.io/badge/abandon-all%20hope-red)
+![Abandon all hope](https://img.shields.io/badge/abandon-all%20hope-red)
 
-"[It] is both good and original; but the part that is good is not
+> "[It] is both good and original; but the part that is good is not
 original, and the part that is original is not good." - Samuel
 Johnson, attrib.
 
-This is a first release. It has not been security-audited. There will
-be bugs.  There is dead code. You should read the Security section.
+This is a first release. Don't trust it. It has not been
+security-audited. There will be bugs.  There is dead code. You should
+read the Security section.
 
 ## Installation
 
