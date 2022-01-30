@@ -16,7 +16,8 @@ program: it is not connected with your regular Unix password.
 original, and the part that is original is not good." - Samuel
 Johnson, attrib.
 
-This is a first release. Don't trust it. It has not been
+This is a pre-release which is published on Github mostly so I have a
+backup of the code. Don't trust it. It has not been
 security-audited. There will be bugs.  There is dead code. You should
 read the Security section.
 

@@ -1084,21 +1084,9 @@ static void display_in(int fd, short mask, void *data) {
 	}
 }
 
-static void comm_in(int fd, short mask, void *data) {
-	if (read_comm_reply()) {
-		// Authentication succeeded
-		state.run_display = false;
-	} else {
-		state.auth_state = AUTH_STATE_INVALID;
-		schedule_indicator_clear(&state);
-		++state.failed_attempts;
-		damage_state(&state);
-	}
-}
 
 int main(int argc, char **argv) {
 	swaylock_log_init(LOG_ERROR);
-	initialize_pw_backend(argc, argv);
 	srand(time(NULL));
 
 	enum line_mode line_mode = LM_LINE;
@@ -1226,7 +1214,6 @@ int main(int argc, char **argv) {
 	loop_add_fd(state.eventloop, wl_display_get_fd(state.display), POLLIN,
 			display_in, NULL);
 
-	loop_add_fd(state.eventloop, get_comm_reply_fd(), POLLIN, comm_in, NULL);
 
 	state.run_display = true;
 	while (state.run_display) {
