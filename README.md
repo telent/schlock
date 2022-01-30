@@ -44,7 +44,7 @@ Generate a PIN file by running
 
 (This is not a suggested pin file location, just an example)
 
-Start schlock with `PIN_FILE=$HOME/.config/schlock.pin schlock`
+Start schlock with `schlock --pin-file $HOME/.config/schlock.pin`
 
 ## Security
 
@@ -86,9 +86,6 @@ configurable)
   around the red background area
 
 - maybe find a better place to put backspace and enter
-
-- use command line parameter for pin file location instead
-  of environment variable
 
 - try on an actual touch device instead of assuming pointer emulation
   will work

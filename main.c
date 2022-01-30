@@ -485,10 +485,12 @@ enum line_mode {
 };
 
 static int parse_options(int argc, char **argv, struct swaylock_state *state,
-		enum line_mode *line_mode, char **config_path) {
+			 enum line_mode *line_mode,
+			 char **config_path) {
 
 	static struct option long_options[] = {
 		{"config", required_argument, NULL, 'C'},
+		{"pin-file", required_argument, NULL, 'p'},
 		{"debug", no_argument, NULL, 'd'},
 		{"daemonize", no_argument, NULL, 'f'},
 		{"help", no_argument, NULL, 'h'},
@@ -504,6 +506,8 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		"\n"
 		"  -C, --config <config_file>       "
 			"Path to the config file.\n"
+		"  -p, --pin-file <pin_file>       "
+			"Path to the hashed PIN file (see mkpin).\n"
 		"  -c, --color <color>              "
 			"Turn the screen into the given color instead of white.\n"
 		"  -d, --debug                      "
@@ -527,7 +531,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:dfhi:s:tvC:", long_options,
+		c = getopt_long(argc, argv, "c:p:dfhi:s:tvC:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -537,6 +541,10 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			if (config_path) {
 				*config_path = strdup(optarg);
 			}
+			break;
+		case 'p':
+			if(state)
+				state->args.pin_file = strdup(optarg);
 			break;
 		case 'd':
 			swaylock_log_init(LOG_DEBUG);
@@ -699,6 +707,12 @@ int main(int argc, char **argv) {
 			return result;
 		}
 	}
+
+	if(state.args.pin_file == NULL) {
+		swaylock_log(LOG_ERROR, "Exiting - no PIN file path specified");
+		return 2;
+	}
+
 
 	if (line_mode == LM_INSIDE) {
 		state.args.colors.line = state.args.colors.inside;

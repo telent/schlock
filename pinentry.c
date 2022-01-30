@@ -244,11 +244,11 @@ bool is_wrong_pin(char *entered, char *expected)
 	crypto_pwhash_str_verify(expected, entered, strlen(entered));
 }
 
-void submit_pin()
+void submit_pin(char * pin_file_path)
 {
     char expected[crypto_pwhash_STRBYTES];
 
-    int pw_file = open(getenv("PIN_FILE"), O_RDONLY);
+    int pw_file = open(pin_file_path, O_RDONLY);
 
     // need a better way to report missing file
     if(pw_file < 0) return;
@@ -291,7 +291,7 @@ void action_for_xy(struct swaylock_state *state, int x, int y)
     else if(b == 10)
 	delete_digit();
     else if(b == 11) {
-	submit_pin();
+	submit_pin(state->args.pin_file);
 	damage_state(state);
 	loop_add_timer(state->eventloop,
 		       1000 * delay_time,

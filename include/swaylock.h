@@ -47,6 +47,7 @@ struct swaylock_args {
 	struct swaylock_colors colors;
 	enum background_mode mode;
 	bool daemonize;
+	char * pin_file;
 };
 
 struct swaylock_password {
