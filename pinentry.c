@@ -185,11 +185,8 @@ void delete_digit()
     fprintf(stderr, "typed: \"%s\"\n", entered_pin);
 }
 
-
 bool is_wrong_pin(char *entered, char *expected)
 {
-    fprintf(stderr, "entered %s %ld expected \"%s\"",
-	    entered, strlen(entered), expected);
     return
 	crypto_pwhash_str_verify(expected, entered, strlen(entered));
 }

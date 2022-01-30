@@ -51,14 +51,12 @@ void render_frame(struct swaylock_surface *surface) {
 	int new_width = pinpad_width;
 	int new_height = pinpad_height;
 
-
 	int subsurf_xpos;
 	int subsurf_ypos;
 
 	// centre on the display
 	subsurf_xpos = (surface->width - new_width) / 2;
 	subsurf_ypos = (surface->height - new_height) / 2;
-
 
 	wl_subsurface_set_position(surface->subsurface, subsurf_xpos, subsurf_ypos);
 
