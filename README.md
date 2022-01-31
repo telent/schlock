@@ -86,9 +86,11 @@ configurable)
   around the red background area
 
 - maybe find a better place to put backspace and enter
+   - backspace could be at top, right side of the squiggle
 
-- try on an actual touch device instead of assuming pointer emulation
-  will work
+- make it work on the pinephone
+   - add touch events (done)
+   - figure out why screen not updating?
 
 - refine the backoff timings. maybe you get three attempts before
   the delay cuts in but then the delay is longer.

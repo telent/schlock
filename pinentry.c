@@ -27,7 +27,7 @@ const int padding_x = 20;
 const int padding_y = 15;
 const int num_digits = sizeof(digits) / sizeof(digits[0]);
 const int rows = 1 + (num_digits / cols) ;
-const int feedback_height = 40;
+const int feedback_height = 140;
 
 /* the '+ 2' here is because we draw with a 2 pixel pen, so the
  * dimensions of the stroke centres is less than the size of the
@@ -101,7 +101,8 @@ static inline unsigned rol(unsigned r, int k) {
 
 void squiggle(cairo_t * cairo, struct swaylock_surface *surface)
 {
-    int feedback_magn = feedback_height/2;
+    unsigned int height = feedback_height * surface->scale;
+    unsigned int width = pinpad_width * surface->scale;
 
     /* This is probably quite silly. The goal here is that within
      * a single pin entry attempt ("submit" not pressed) the same
@@ -110,11 +111,13 @@ void squiggle(cairo_t * cairo, struct swaylock_surface *surface)
      */
 
     unsigned int seed = (unsigned int) allow_next_attempt;
+
     for(size_t i=0; i < strlen(entered_pin); i++) {
 	seed ^= entered_pin[i];
 	seed = rol(seed, 5);
     }
     srand(seed);
+
 
     cairo_set_source_rgba(cairo,
 			  frand(0.4,1),
@@ -123,18 +126,18 @@ void squiggle(cairo_t * cairo, struct swaylock_surface *surface)
 			  1.0);
 
     cairo_set_line_width(cairo, 9.0 * surface->scale);
-    cairo_move_to(cairo, 10, feedback_magn);
+    cairo_move_to(cairo, 10 * surface->scale, height/2);
     cairo_curve_to(cairo,
-		   frand(pinpad_width * 0.33 - 20,
-			 pinpad_width * 0.33 + 20),
-		   frand(0, feedback_height),
+		   frand(width * 0.33 - 20,
+			 width * 0.33 + 20),
+		   frand(0, height),
 
-		   frand(pinpad_width * 0.67 - 20,
-			 pinpad_width * 0.67 + 20),
-		   frand(0, feedback_height),
+		   frand(width * 0.67 - 20,
+			 width * 0.67 + 20),
+		   frand(0, height),
 
-		   pinpad_width - 10,
-		   feedback_magn);
+		   width - 10,
+		   height/2);
     cairo_stroke(cairo);
 }
 
