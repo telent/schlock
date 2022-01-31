@@ -288,6 +288,7 @@ static void wl_touch_frame(void *data, struct wl_touch *touch)
 			action_for_xy(state,
 				      wl_fixed_to_int(t->x),
 				      wl_fixed_to_int(t->y));
+			damage_state(state);
 		}
 		t->current = false;
 	}
