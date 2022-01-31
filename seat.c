@@ -203,6 +203,110 @@ static const struct wl_pointer_listener pointer_listener = {
 	.axis_discrete = wl_pointer_axis_discrete,
 };
 
+struct touch_point {
+	int32_t id;
+	wl_fixed_t x,y;
+	bool current;
+} touch_points[10] = { { .id = -1, } };
+
+struct touched_point {
+	bool current;
+	wl_fixed_t x,y;
+} touched_points[10];
+
+
+static void add_touch_down(int32_t id,
+			   wl_fixed_t x,
+			   wl_fixed_t y)
+{
+	for(int i=0; i < 10; i++) {
+		struct touch_point *t = &touch_points[i];
+		if(t->current == false) {
+			t->id = id;
+		}
+		if(t->id == id) {
+			if(x > -1) t->x = x;
+			if(y > -1) t->y = y;
+			t->current = true;
+			return;
+		}
+	}
+}
+
+static void add_touch_up(int32_t id)
+{
+	struct touch_point *t = NULL;
+	for(int i=0; i < 10; i++) {
+		t = &touch_points[i];
+		if ((t->current == true) && (t->id == id)) break;
+	}
+	if(t) {
+		for(int i=0; i < 10; i++) {
+			if(!touched_points[i].current) {
+				touched_points[i].x = t->x;
+				touched_points[i].y = t->y;
+				touched_points[i].current = true;
+				t->current = false;
+				return;
+			}
+		}
+	}
+}
+
+static void wl_touch_down(void *data, struct wl_touch *touch,
+			  uint32_t serial,
+			  uint32_t time, struct wl_surface *surface,
+			  int32_t id, wl_fixed_t x,  wl_fixed_t y)
+{
+	add_touch_down(id, x, y);
+}
+
+static void wl_touch_motion(void *data, struct wl_touch *touch,
+			    uint32_t time,
+			    int32_t id,
+			    wl_fixed_t x,  wl_fixed_t y)
+{
+	add_touch_down(id, x, y);
+}
+static void wl_touch_up(void *data, struct wl_touch *touch,
+			uint32_t serial,
+			uint32_t time,
+			int32_t id)
+{
+	add_touch_up(id);
+}
+
+
+static void wl_touch_frame(void *data, struct wl_touch *touch)
+{
+	struct swaylock_seat *seat = data;
+	struct swaylock_state *state = seat->state;
+
+	for(int i=0; i < 10; i++) {
+		struct touched_point *t = &touched_points[i];
+		if(t->current) {
+			action_for_xy(state,
+				      wl_fixed_to_int(t->x),
+				      wl_fixed_to_int(t->y));
+		}
+		t->current = false;
+	}
+}
+
+static void wl_touch_cancel(void *data, struct wl_touch *touch)
+{
+	/* whatever */
+}
+
+static const struct wl_touch_listener touch_listener = {
+	.down = wl_touch_down,
+	.up = wl_touch_up,
+	.motion = wl_touch_motion,
+	.frame = wl_touch_frame,
+	.cancel = wl_touch_cancel,
+};
+
+
 static void seat_handle_capabilities(void *data, struct wl_seat *wl_seat,
 		enum wl_seat_capability caps) {
 	struct swaylock_seat *seat = data;
@@ -221,6 +325,11 @@ static void seat_handle_capabilities(void *data, struct wl_seat *wl_seat,
 	if ((caps & WL_SEAT_CAPABILITY_KEYBOARD)) {
 		seat->keyboard = wl_seat_get_keyboard(wl_seat);
 		wl_keyboard_add_listener(seat->keyboard, &keyboard_listener, seat);
+	}
+	if ((caps & WL_SEAT_CAPABILITY_TOUCH)) {
+		seat->touch = wl_seat_get_touch(wl_seat);
+		wl_touch_add_listener(seat->touch,
+				      &touch_listener, seat);
 	}
 }
 

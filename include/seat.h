@@ -19,6 +19,7 @@ struct swaylock_seat {
 	struct swaylock_state *state;
 	struct wl_pointer *pointer;
 	struct wl_keyboard *keyboard;
+	struct wl_touch *touch;
 	int32_t repeat_period_ms;
 	int32_t repeat_delay_ms;
 	uint32_t repeat_sym;

@@ -99,6 +99,45 @@ static inline unsigned rol(unsigned r, int k) {
     return (r << k) | (r >> (32 - k));
 }
 
+void squiggle(cairo_t * cairo, struct swaylock_surface *surface)
+{
+    int feedback_magn = feedback_height/2;
+
+    /* This is probably quite silly. The goal here is that within
+     * a single pin entry attempt ("submit" not pressed) the same
+     * curve should be drawn for the same entered_pin, but that
+     * different curves are drawn on subsequent attempts
+     */
+
+    unsigned int seed = (unsigned int) allow_next_attempt;
+    for(size_t i=0; i < strlen(entered_pin); i++) {
+	seed ^= entered_pin[i];
+	seed = rol(seed, 5);
+    }
+    srand(seed);
+
+    cairo_set_source_rgba(cairo,
+			  frand(0.4,1),
+			  frand(0.4,1),
+			  frand(0.4,1),
+			  1.0);
+
+    cairo_set_line_width(cairo, 9.0 * surface->scale);
+    cairo_move_to(cairo, 10, feedback_magn);
+    cairo_curve_to(cairo,
+		   frand(pinpad_width * 0.33 - 20,
+			 pinpad_width * 0.33 + 20),
+		   frand(0, feedback_height),
+
+		   frand(pinpad_width * 0.67 - 20,
+			 pinpad_width * 0.67 + 20),
+		   frand(0, feedback_height),
+
+		   pinpad_width - 10,
+		   feedback_magn);
+    cairo_stroke(cairo);
+}
+
 void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 {
     if(allow_next_attempt == 0)
@@ -131,41 +170,7 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 
 
     if(entered_pin[0]) {
-	int feedback_magn = feedback_height/2;
-
-	/* This is probably quite silly. The goal here is that within
-	 * a single pin entry attempt ("submit" not pressed) the same
-	 * curve should be drawn for the same entered_pin, but that
-	 * different curves are drawn on subsequent attempts
-	 */
-
-	unsigned int seed = (unsigned int) allow_next_attempt;
-	for(size_t i=0; i < strlen(entered_pin); i++) {
-	    seed ^= entered_pin[i];
-	    seed = rol(seed, 5);
-	}
-	srand(seed);
-
-	cairo_set_source_rgba(cairo,
-			      frand(0.4,1),
-			      frand(0.4,1),
-			      frand(0.4,1),
-			      1.0);
-
-	cairo_set_line_width(cairo, 9.0 * surface->scale);
-	cairo_move_to(cairo, 10, feedback_magn);
-	cairo_curve_to(cairo,
-		       frand(pinpad_width * 0.33 - 20,
-			     pinpad_width * 0.33 + 20),
-		       frand(0, feedback_height),
-
-		       frand(pinpad_width * 0.67 - 20,
-			     pinpad_width * 0.67 + 20),
-		       frand(0, feedback_height),
-
-		       pinpad_width - 10,
-		       feedback_magn);
-	cairo_stroke(cairo);
+	squiggle(cairo, surface);
     }
 
     for(int i = 0; i < num_digits; i ++) {
