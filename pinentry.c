@@ -85,6 +85,7 @@ void render_centered_text(cairo_t *cairo, int cx, int cy, char *text)
 
 static time_t allow_next_attempt = 0;
 static int delay_time = 0;
+static bool checking = false;
 bool in_timeout() {
     return (allow_next_attempt > time(NULL));
 }
@@ -158,7 +159,7 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 
     // Clear
     cairo_save(cairo);
-    if(in_timeout()) {
+    if(checking) {
 	cairo_set_source_rgba(cairo, 1, 0, 0, 0.3);
     } else {
 	cairo_set_source_rgba(cairo, 0, 0, 0, 0);
@@ -171,6 +172,13 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 			   CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_NORMAL);
     cairo_set_font_size(cairo, sc * button_radius * 1.2f);
 
+    if(in_timeout()) {
+	cairo_set_source_u32(cairo, 0xc02020ff);
+	render_centered_text(cairo,
+			     pinpad_width * surface->scale / 2,
+			     feedback_height * surface->scale / 2,
+			     "NO");
+    }
 
     if(entered_pin[0]) {
 	squiggle(cairo, surface);
@@ -229,13 +237,13 @@ static int button_for_xy(int x, int y)
     float colf = 1.0 * (x - button_radius) /
 	(button_radius * 2 + padding_x);
     int col = (int) (floor(colf + 0.5));
-    if(fabs(colf - col) > 0.3)
+    if(fabs(colf - col) > 0.4)
 	return -1;
 
     float rowf  = 1.0 * (y - button_radius) /
 	(button_radius * 2 + padding_y);
     int row = (int) (floor(rowf + 0.5));
-    if(fabs(rowf - row) > 0.3)
+    if(fabs(rowf - row) > 0.4)
 	return -1;
 
     return col + row * cols;
@@ -293,19 +301,37 @@ void clear_timeout(void * data)
     damage_state(state);
 }
 
-void action_for_xy(struct swaylock_state *state, int x, int y)
+
+void perform_pin_check(void * data)
 {
-    int b = button_for_xy(x,y);
-    if((b >= 0) && (b < num_digits))
-	enter_pin_digit(digits[b]);
-    else if(b == 10)
-	delete_digit();
-    else if(b == 11) {
+        struct swaylock_state *state = (struct swaylock_state *) data;
+
 	submit_pin(state->args.pin_file);
+	checking = false;
 	damage_state(state);
 	loop_add_timer(state->eventloop,
 		       1000 * delay_time,
 		       clear_timeout,
+		       state);
+}
+
+void action_for_xy(struct swaylock_state *state, int x, int y)
+{
+    int b = button_for_xy(x,y);
+    swaylock_log(LOG_DEBUG, "action %d %d %d", b, x, y);
+    if((b >= 0) && (b < num_digits)) {
+	enter_pin_digit(digits[b]);
+    }
+    else if(b == 11) {
+	checking = true;
+	damage_state(state);
+	/* we want to provide visual feedback that a check is in
+	 * progress, which means we need to let the  main loop
+	 * run here. Fire a timer to do the actual checkig
+	 */
+	loop_add_timer(state->eventloop,
+		       100,
+		       perform_pin_check,
 		       state);
     }
 }
