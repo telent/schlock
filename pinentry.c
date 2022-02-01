@@ -1,16 +1,16 @@
 #include "cairo.h"
 #include "swaylock.h"
 #include "loop.h"
+#include "log.h"
 #include <sys/param.h>
 #include <sodium.h>
 #include <fcntl.h>
 
 char *digits[] = {
-    "0", "1", "2", "3",
-    "4", "5", "6", "7",
-    "8", "9",
- /* "A", "B", */
- /*    "C", "D", "E", "F" */
+    "1", "2", "3",
+    "4", "5", "6",
+    "7", "8", "9",
+    "", "0",
 };
 
 char * backspace = "⌫";
@@ -187,6 +187,9 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
     for(int i = 0; i < num_digits; i ++) {
 	int r = i / cols;
 	int c = i % cols;
+	char *text = digits[c + cols * r];
+
+	if(strlen(text) == 0) continue;
 
 	cairo_set_source_u32(cairo, 0x2020ff60);
 	cairo_set_line_width(cairo, 3.0 * surface->scale);
@@ -203,7 +206,6 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 		  sc * (button_radius - thickness), 0, 2 * M_PI);
 	cairo_stroke(cairo);
 
-	char *text = digits[c + cols * r];
 	cairo_set_source_u32(cairo, 0x000077);
 	render_centered_text(cairo, x + 2, y + 2, text);
 	render_centered_text(cairo, x - 1, y - 1, text);
@@ -213,8 +215,8 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
     }
     cairo_set_source_u32(cairo, 0xc02020ff);
     render_centered_text(cairo,
-			 x_for_col(cols-2) * surface->scale,
-			 y_for_row(rows-1) * surface->scale,
+			 pinpad_width * surface->scale * 0.8,
+			 feedback_height * surface->scale * 0.75,
 			 backspace);
 
     cairo_set_font_size(cairo, sc * button_radius * 2.20f);
@@ -273,7 +275,7 @@ void submit_pin(char * pin_file_path)
     read(pw_file, expected, sizeof expected);
     char *p = strchr(expected, '\n');
     if(p) *p = '\0';
-
+    swaylock_log(LOG_DEBUG, "submtting");
     if(is_wrong_pin(entered_pin, expected)) {
 	delay_time = MAX(delay_time * 2, 1);
 	allow_next_attempt = time(NULL) + delay_time;
