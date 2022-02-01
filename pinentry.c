@@ -23,11 +23,12 @@ char entered_pin[24] = { '\0' };
 const int button_radius = 35;
 const int cols = 3;
 const int thickness = 2;
-const int padding_x = 20;
-const int padding_y = 15;
+const int padding_x = 30;
+const int padding_y = 35;
 const int num_digits = sizeof(digits) / sizeof(digits[0]);
 const int rows = 1 + (num_digits / cols) ;
-const int feedback_height = 140;
+
+const int feedback_height = 100;
 
 /* the '+ 2' here is because we draw with a 2 pixel pen, so the
  * dimensions of the stroke centres is less than the size of the
@@ -44,16 +45,9 @@ const int pinpad_height = (8 +
 			   (rows - 1) * padding_y +
 			   feedback_height);
 
-#define M_PI 3.14159265358979323846
+const int feedback_width = pinpad_width - button_radius - 15;
 
-/* button 0 centre is at offset (button_radius)
- *              right edge at 2* (button_radius)
- * button 1 left edge at 2* (button_radius) + padding
- *             centre  at 2* (button_radius) + padding
- *                       + (button_radius)
- * => centres distance is 2* (button_radius) + padding
- * => width = button 0 centre + (rows-1)*(centres distance) + radius
- */
+#define M_PI 3.14159265358979323846
 
 static int x_for_col(int col)
 {
@@ -103,7 +97,7 @@ static inline unsigned rol(unsigned r, int k) {
 void squiggle(cairo_t * cairo, struct swaylock_surface *surface)
 {
     unsigned int height = feedback_height * surface->scale;
-    unsigned int width = pinpad_width * surface->scale;
+    unsigned int width = feedback_width * surface->scale;
 
     /* This is probably quite silly. The goal here is that within
      * a single pin entry attempt ("submit" not pressed) the same
@@ -124,18 +118,20 @@ void squiggle(cairo_t * cairo, struct swaylock_surface *surface)
 			  frand(0.4,1),
 			  frand(0.4,1),
 			  frand(0.4,1),
-			  1.0);
+			  0.8);
 
-    cairo_set_line_width(cairo, 9.0 * surface->scale);
+    cairo_set_line_width(cairo, 6.0 * surface->scale);
+    cairo_set_line_cap(cairo, CAIRO_LINE_CAP_ROUND);
     cairo_move_to(cairo, 10 * surface->scale, height/2);
+    int phase = 1 - (rand() & 2);
     cairo_curve_to(cairo,
-		   frand(width * 0.33 - 20,
-			 width * 0.33 + 20),
-		   frand(0, height),
+		   frand(width * 0.33 - 40,
+			 width * 0.33 + 40),
+		   height/2 + phase * frand(height * 0.6, height),
 
-		   frand(width * 0.67 - 20,
-			 width * 0.67 + 20),
-		   frand(0, height),
+		   frand(width * 0.67 - 40,
+			 width * 0.67 + 40),
+		   height/2 - phase * frand(height * 0.6, height),
 
 		   width - 10,
 		   height/2);
@@ -173,11 +169,17 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
     cairo_set_font_size(cairo, sc * button_radius * 1.2f);
 
     if(in_timeout()) {
+	cairo_set_source_u32(cairo, 0x000000ff);
+	render_centered_text(cairo,
+			     pinpad_width * surface->scale / 2,
+			     feedback_height * surface->scale / 2,
+			     "wrong");
+	cairo_set_font_size(cairo, sc * button_radius * 1.1f);
 	cairo_set_source_u32(cairo, 0xc02020ff);
 	render_centered_text(cairo,
 			     pinpad_width * surface->scale / 2,
 			     feedback_height * surface->scale / 2,
-			     "NO");
+			     "wrong");
     }
 
     if(entered_pin[0]) {
@@ -198,10 +200,11 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 		  sc * button_radius, 0, 2 * M_PI);
 	cairo_stroke(cairo);
 
+	cairo_set_source_u32(cairo, 0x2020ff70);
 	cairo_set_line_width(cairo, 3.0 * surface->scale);
 	cairo_arc(cairo, x,y,
 		  sc * (button_radius - thickness), 0, 2 * M_PI);
-	cairo_stroke(cairo);
+	cairo_fill(cairo);
 
 	char *text = digits[c + cols * r];
 	cairo_set_source_u32(cairo, 0x000077);
@@ -212,10 +215,23 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 	render_centered_text(cairo, x, y, text);
     }
     cairo_set_source_u32(cairo, 0xc02020ff);
-    render_centered_text(cairo,
-			 x_for_col(cols-2) * surface->scale,
-			 y_for_row(rows-1) * surface->scale,
-			 backspace);
+
+    cairo_text_extents_t extents;
+    cairo_font_extents_t fe;
+    double text_x, text_y;
+    cairo_set_font_size(cairo, sc * button_radius);
+    cairo_text_extents(cairo, backspace, &extents);
+    cairo_font_extents(cairo, &fe);
+    text_x = (pinpad_width * surface->scale) -
+	(extents.width + extents.x_bearing);
+
+    text_y = (feedback_height/2 * surface->scale) +
+	(extents.height / 2);
+
+    cairo_move_to(cairo, text_x, text_y);
+    cairo_show_text(cairo, backspace);
+
+    cairo_stroke(cairo);
 
     cairo_set_font_size(cairo, sc * button_radius * 2.20f);
     cairo_set_source_u32(cairo, 0x000000a0);
@@ -223,7 +239,7 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 			 x_for_col(cols-1) * surface->scale,
 			 y_for_row(rows-1) * surface->scale,
 			 submit);
-    cairo_set_font_size(cairo, sc * button_radius * 2.17f);
+    cairo_set_font_size(cairo, sc * button_radius * 2.10f);
     cairo_set_source_u32(cairo, 0x40c040a0);
     render_centered_text(cairo,
 			 x_for_col(cols-1) * surface->scale,
@@ -233,6 +249,9 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 
 static int button_for_xy(int x, int y)
 {
+    if((x > 215) && (y > 20) && (y< 80))
+	return 99;
+
     y -= feedback_height;
     float colf = 1.0 * (x - button_radius) /
 	(button_radius * 2 + padding_x);
@@ -318,16 +337,17 @@ void perform_pin_check(void * data)
 void action_for_xy(struct swaylock_state *state, int x, int y)
 {
     int b = button_for_xy(x,y);
-    swaylock_log(LOG_DEBUG, "action %d %d %d", b, x, y);
+
     if((b >= 0) && (b < num_digits)) {
 	enter_pin_digit(digits[b]);
-    }
-    else if(b == 11) {
+    } else if(b==99) {
+	delete_digit();
+    } else if(b == 11) {
 	checking = true;
 	damage_state(state);
 	/* we want to provide visual feedback that a check is in
 	 * progress, which means we need to let the  main loop
-	 * run here. Fire a timer to do the actual checkig
+	 * run here. Fire a timer to do the actual checking
 	 */
 	loop_add_timer(state->eventloop,
 		       100,
