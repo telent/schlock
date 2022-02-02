@@ -96,7 +96,7 @@ static inline unsigned rol(unsigned r, int k) {
 void squiggle(cairo_t * cairo, struct swaylock_surface *surface)
 {
     unsigned int height = feedback_height * surface->scale;
-    unsigned int width = feedback_width * surface->scale;
+    unsigned int width = feedback_width * surface->scale - 10;
 
     /* This is probably quite silly. The goal here is that within
      * a single pin entry attempt ("submit" not pressed) the same
@@ -105,6 +105,7 @@ void squiggle(cairo_t * cairo, struct swaylock_surface *surface)
      */
 
     unsigned int seed = (unsigned int) allow_next_attempt;
+    int cycle = strlen(entered_pin) % 3;
 
     for(size_t i=0; i < strlen(entered_pin); i++) {
 	seed ^= entered_pin[i];
@@ -112,27 +113,24 @@ void squiggle(cairo_t * cairo, struct swaylock_surface *surface)
     }
     srand(seed);
 
-
     cairo_set_source_rgba(cairo,
-			  frand(0.4,1),
-			  frand(0.4,1),
-			  frand(0.4,1),
-			  0.8);
+			  frand(0.4,0.5 * (cycle != 0)),
+			  frand(0.4,0.5 * (cycle != 1)),
+			  frand(0.4,0.5 * (cycle != 2)),
+			  1.0);
 
     cairo_set_line_width(cairo, 6.0 * surface->scale);
     cairo_set_line_cap(cairo, CAIRO_LINE_CAP_ROUND);
     cairo_move_to(cairo, 10 * surface->scale, height/2);
-    int phase = 1 - (rand() & 2);
+    int phase = 1 - 2*(strlen(entered_pin) & 1);
     cairo_curve_to(cairo,
-		   frand(width * 0.33 - 40,
-			 width * 0.33 + 40),
+		   frand(width * 0.1, width * 0.4),
 		   height/2 + phase * frand(height * 0.6, height),
 
-		   frand(width * 0.67 - 40,
-			 width * 0.67 + 40),
+		   frand(width * 0.6, width * 0.9),
 		   height/2 - phase * frand(height * 0.6, height),
 
-		   width - 10,
+		   width,
 		   height/2);
     cairo_stroke(cairo);
 }
