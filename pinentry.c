@@ -6,11 +6,10 @@
 #include <fcntl.h>
 
 char *digits[] = {
-    "0", "1", "2", "3",
-    "4", "5", "6", "7",
-    "8", "9",
- /* "A", "B", */
- /*    "C", "D", "E", "F" */
+    "1", "2", "3",
+    "4", "5", "6",
+    "7", "8", "9",
+    "",  "0"
 };
 
 char * backspace = "⌫";
@@ -189,6 +188,9 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
     for(int i = 0; i < num_digits; i ++) {
 	int r = i / cols;
 	int c = i % cols;
+	char *text = digits[c + cols * r];
+
+	if(strlen(text) == 0) continue;
 
 	cairo_set_source_u32(cairo, 0x2020ff60);
 	cairo_set_line_width(cairo, 3.0 * surface->scale);
@@ -206,7 +208,6 @@ void render_pinentry_pad(cairo_t *cairo, struct swaylock_surface *surface)
 		  sc * (button_radius - thickness), 0, 2 * M_PI);
 	cairo_fill(cairo);
 
-	char *text = digits[c + cols * r];
 	cairo_set_source_u32(cairo, 0x000077);
 	render_centered_text(cairo, x + 2, y + 2, text);
 	render_centered_text(cairo, x - 1, y - 1, text);
