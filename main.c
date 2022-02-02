@@ -28,6 +28,24 @@
 #include "xdg-output-unstable-v1-client-protocol.h"
 
 
+static uint32_t parse_color(const char *color) {
+	if (color[0] == '#') {
+		++color;
+	}
+
+	int len = strlen(color);
+	if (len != 6 && len != 8) {
+		swaylock_log(LOG_DEBUG, "Invalid color %s, defaulting to 0xFFFFFFFF",
+				color);
+		return 0xFFFFFFFF;
+	}
+	uint32_t res = (uint32_t)strtoul(color, NULL, 16);
+	if (strlen(color) == 6) {
+		res = (res << 8) | 0xFF;
+	}
+	return res;
+}
+
 int lenient_strcmp(char *a, char *b) {
 	if (a == b) {
 		return 0;
@@ -540,6 +558,11 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		case 'C':
 			if (config_path) {
 				*config_path = strdup(optarg);
+			}
+			break;
+		case 'c':
+			if (state) {
+				state->args.colors.background = parse_color(optarg);
 			}
 			break;
 		case 'p':
